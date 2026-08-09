@@ -83,7 +83,6 @@ def main(argv: list[str] | None = None) -> None:
         )
         sys.exit(1)
     report.print(
-        width=240,
         include_input=True,
         include_output=True,
         output_config={"value_formatter": "{0.answer}"},
