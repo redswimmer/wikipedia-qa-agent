@@ -293,15 +293,15 @@ cases:
     phrasing: question
   expected_output: null
   evaluators: []
-- name: gibberish_imperative_treblorn_accord
-  inputs: Summarize the treblorn accord before the council reconvenes.
+- name: gibberish_imperative_blathrizzle
+  inputs: Summarize the blathrizzle before the council reconvenes.
   metadata:
     category: gibberish
     phrasing: imperative
   expected_output: null
   evaluators: []
-- name: gibberish_imperative_drenthic_offset
-  inputs: Calculate the drenthic offset and send it over.
+- name: gibberish_imperative_florbsnitch
+  inputs: Calculate the florbsnitch and send it over.
   metadata:
     category: gibberish
     phrasing: imperative
