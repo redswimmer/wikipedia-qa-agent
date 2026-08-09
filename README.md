@@ -19,7 +19,7 @@ cp .env.example .env
 uv run python -m app.query_agent "In what year was the Eiffel Tower completed?"
 ```
 
-Example Response (streams live — tool calls to stderr, answer to stdout):
+Example Response:
 
 ```
 Tool calls:
@@ -35,8 +35,6 @@ The Eiffel Tower was completed in 1889, having been built by Gustave
 Eiffel's company from 1887 to 1889 as the centerpiece of the 1889 World's
 Fair in Paris.
 ```
-
-`2>/dev/null` gets you just the answer.
 
 ## Evals
 
