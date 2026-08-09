@@ -41,5 +41,19 @@ exactly what the agent looked up before answering, not just the answer itself.
 
 ## Evals
 
-The eval suite that measures answer quality (assignment deliverable #3) is
-not yet built.
+The eval suite (assignment deliverable #3) grades the agent against a
+small, hand-picked set of Wikipedia-grounded questions from
+[HotpotQA](https://huggingface.co/datasets/hotpotqa/hotpot_qa) (Yang et
+al., 2018 — see `docs/hotpotqa_1809.09600v1.md`), spanning easy/medium/hard
+difficulty.
+
+```bash
+uv run python -m evaluations.run format_validation
+```
+
+This first dataset checks the agent's output is well-formed (a real
+answer, well-formed tool-call records) — correctness and faithfulness
+grading come next.
+
+No new setup beyond the Quickstart above: running an already-built dataset
+needs the same API key and network access as the CLI, nothing more.

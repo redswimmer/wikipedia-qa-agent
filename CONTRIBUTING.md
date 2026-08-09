@@ -56,3 +56,11 @@ uv run pre-commit run --all-files
   update the *workspace's* lockfile instead of this repo's, leaving
   `uv sync --locked` broken for anyone who clones just this repo.
 - Requires Python >= 3.13 (see `pyproject.toml`).
+- To add more HotpotQA-sourced cases to an eval dataset: use the
+  `datasets` dev dependency interactively (e.g. `datasets.load_dataset("hotpotqa/hotpot_qa",
+  "distractor", split="train", streaming=True)`), build `Case`/`Dataset`
+  objects per `evaluations/models.py`/`evaluations/evaluators.py`, and call
+  `Dataset.to_file(...)`. See `evaluations/datasets/format_validation.yaml`'s
+  header comment for the exact methodology used last time — no build script
+  is kept in the repo, only the resulting YAML (see the design doc under
+  `docs/superpowers/specs/` for why).

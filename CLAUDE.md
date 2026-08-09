@@ -25,6 +25,7 @@ uv run pytest tests/unit/test_app_imports.py::test_app_modules_import  # single 
 uv run pre-commit run --all-files  # run every quality gate without committing
 
 uv run python -m app.query_agent "your question"  # ask a question
+uv run python -m evaluations.run format_validation  # run an eval dataset (hits real API + Wikipedia)
 ```
 
 Every commit runs ruff (lint + format), `ty`, and pytest via pre-commit; the
@@ -164,16 +165,51 @@ to a logging contract and can drift from what the model actually saw).
 - `app/tools.py` — the `search_wikipedia` tool: MediaWiki search + extract
   retrieval (functional core / imperative shell split within the module).
 - `app/prompts.py` — the agent's system prompt.
-- `app/agent.py` — `build_agent(model=None)`: constructs the `Agent`,
-  registering `search_wikipedia` and resolving the real Anthropic model from
-  `Settings` when no model is given. No CLI/argparse/printing logic.
-- `app/runner.py` — `run_agent(agent, question, deps)`: runs a question
-  through the agent and returns an auditable `RunTranscript` built from
-  Pydantic AI's own message history (see Auditability above). Shared by the
-  CLI and (later) the eval suite — neither depends on the other.
+- `app/agent.py` — the module-level `agent` (registers `search_wikipedia`,
+  no model bound) plus `resolve_real_model(settings=None)`: resolves the
+  real Anthropic model from `Settings` when no settings are given. No
+  CLI/argparse/printing logic.
+- `app/runner.py` — `run_agent(agent, question, deps, model)`: runs a
+  question through the agent and returns an auditable `RunTranscript` built
+  from Pydantic AI's own message history (see Auditability above). Shared
+  by the CLI and the eval suite (`evaluations/task.py`) — neither depends
+  on the other.
 - `app/query_agent.py` — the CLI entrypoint (`python -m app.query_agent`).
   The only module with argparse/printing/CLI-specific error handling;
   depends on `agent.py` and `runner.py`, and nothing else depends on it.
+- `evaluations/` — the eval suite (assignment deliverable #3).
+  `models.py` (`HotpotQAMetadata`: cross-cutting HotpotQA provenance —
+  `level`/`type`/`hotpotqa_id`; purpose-specific grading data, e.g. a future
+  correctness dataset's expected answer, lives next to the evaluator that
+  reads it, not here — keeps this file's reason to change singular).
+  `evaluators.py` (`Evaluator` subclasses + `CUSTOM_EVALUATOR_TYPES`; grows
+  by addition as new eval purposes are added — split into multiple files
+  only if it gets large enough to violate "one clear responsibility", not
+  preemptively). `task.py` (`production_task()`: the one production
+  entrypoint every dataset's cases run through — wraps
+  `app.agent.resolve_real_model()` + `app.tools.build_wikipedia_client()` +
+  `app.runner.run_agent()`; reused unchanged across every dataset). `run.py`
+  (generic: `uv run python -m evaluations.run <dataset_name>` — never
+  touched when adding a new dataset, since the dataset name is just an
+  argument). `datasets/*.yaml` — one file per eval purpose; cases *and*
+  their evaluator(s) are serialized together via
+  `Dataset.to_file(custom_evaluator_types=...)`, so the YAML is
+  self-describing, with an auto-generated `*_schema.json` sibling for IDE
+  autocomplete. Depends only on `app/*`, never `app/query_agent.py` — same
+  rule as `query_agent.py` itself.
+- Evals hit the real Anthropic API and live Wikipedia — they are run
+  manually (`uv run python -m evaluations.run <dataset_name>`), never by
+  pytest/pre-commit/CI. Code quality on `evaluations/*.py` is *not*
+  excluded: ruff/ty run repo-wide with no path exclusions, and
+  `TranscriptWellFormed`'s pure logic has a normal pytest unit test — only
+  the live agent execution itself stays manual.
+- HotpotQA-sourced datasets: no build script is committed — sourcing is
+  one-off curation work (see `docs/superpowers/specs/2026-08-09-pydantic-evals-hotpotqa-design.md`
+  for why), and only its output (the YAML + schema) lands in the repo.
+  `datasets` (Hugging Face) is a dev-only dependency for that curation work;
+  nothing in the committed code imports it. HotpotQA (Yang et al. 2018,
+  arXiv:1809.09600, CC-BY-SA-4.0) is extracted to
+  `docs/hotpotqa_1809.09600v1.md` for reference.
 - `tests/unit/test_app_imports.py` is currently a smoke test only (import-time
   check on the six `app` modules) — the real eval suite (deliverable #3 of
   the assignment) still needs to be built out.
