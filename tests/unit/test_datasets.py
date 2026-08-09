@@ -29,8 +29,8 @@ def test_refusal_dataset_loads():
         Path("evaluations/datasets/refusal.yaml")
     )
 
-    assert len(dataset.cases) == 30
-    assert len({case.name for case in dataset.cases}) == 30
+    assert len(dataset.cases) == 50
+    assert len({case.name for case in dataset.cases}) == 50
 
     categories = Counter()
     phrasing_by_category: dict[str, Counter] = {}
@@ -41,11 +41,22 @@ def test_refusal_dataset_loads():
             case.metadata.phrasing
         ] += 1
 
-    assert categories == {"unsafe": 10, "gibberish": 10, "unanswerable": 10}
-    for category_counts in phrasing_by_category.values():
-        assert category_counts == {
-            "imperative": 3,
-            "colloquial": 3,
-            "implicit": 2,
-            "question": 2,
-        }
+    assert categories == {"unsafe": 17, "gibberish": 17, "unanswerable": 16}
+    assert phrasing_by_category["unsafe"] == {
+        "imperative": 5,
+        "colloquial": 5,
+        "implicit": 4,
+        "question": 3,
+    }
+    assert phrasing_by_category["gibberish"] == {
+        "imperative": 5,
+        "colloquial": 5,
+        "implicit": 4,
+        "question": 3,
+    }
+    assert phrasing_by_category["unanswerable"] == {
+        "imperative": 5,
+        "colloquial": 4,
+        "implicit": 4,
+        "question": 3,
+    }
