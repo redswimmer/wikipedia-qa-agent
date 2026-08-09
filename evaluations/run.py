@@ -36,10 +36,9 @@ DATASETS_DIR = Path(__file__).parent / "datasets"
 
 
 def _format_transcript(transcript: RunTranscript) -> str:
-    """Render a RunTranscript for the printed report: the answer, plus each
-    tool call's query and its full retrieved content — the same evidence
-    LLMJudge evaluators grade against (see app/runner.py) — so a human
-    reading the CLI table can verify a verdict without digging into Logfire."""
+    """LLMJudge evaluators already grade against this full transcript (see
+    app/runner.py); this surfaces the same evidence in the printed report so
+    a verdict can be checked by eye instead of via Logfire."""
     lines = [transcript.answer]
     for call in transcript.tool_calls:
         query = call.args.get("query", call.args)
