@@ -52,9 +52,9 @@ def test_refusal_dataset_loads():
         }
 
 
-def test_hotpotqa_hard_dataset_loads():
+def test_wikipedia_answer_quality_dataset_loads():
     dataset = Dataset[str, RunTranscript, HotpotQAMetadata].from_file(
-        Path("evaluations/datasets/hotpotqa_hard.yaml")
+        Path("evaluations/datasets/wikipedia_answer_quality.yaml")
     )
 
     assert len(dataset.cases) == 50

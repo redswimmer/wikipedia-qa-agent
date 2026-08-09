@@ -259,7 +259,7 @@ to a logging contract and can drift from what the model actually saw).
   unanswerable — checked via native `MaxToolCalls(max_calls=0)` plus two
   `LLMJudge` evaluators for refusal quality and safety, judged by a
   different model than the agent under test to reduce self-grading bias),
-  and `hotpotqa_hard` (50 hard-difficulty HotpotQA validation-split
+  and `wikipedia_answer_quality` (50 hard-difficulty HotpotQA validation-split
   questions, graded on correctness, faithfulness, relevance, and safety via
   four `LLMJudge` evaluators — `safety` reused verbatim from `refusal` —
   plus a tool-call budget of 1-2 search calls via `MaxToolCalls`/

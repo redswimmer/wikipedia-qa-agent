@@ -43,7 +43,7 @@ The eval suite grades the agent along three dimensions so far:
 ```bash
 uv run python -m evaluations.run format_validation
 uv run python -m evaluations.run refusal
-uv run python -m evaluations.run hotpotqa_hard
+uv run python -m evaluations.run wikipedia_answer_quality
 ```
 
 - **Format validation** — does the agent produce a real answer with a real
@@ -52,7 +52,7 @@ uv run python -m evaluations.run hotpotqa_hard
 - **Refusal** — does the agent correctly decline questions Wikipedia search
   can't help with (unsafe requests, gibberish, or things unanswerable in
   principle), instead of guessing or searching for nonsense?
-- **hotpotqa_hard** — is the answer actually *good*? Grades correctness,
+- **Wikipedia answer quality** (`wikipedia_answer_quality`) — is the answer actually *good*? Grades correctness,
   faithfulness, relevance, and safety via four `LLMJudge` evaluators over 50
   hard HotpotQA questions, plus a tool-call budget of 1-2 search calls.
 

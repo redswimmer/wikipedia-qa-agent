@@ -30,8 +30,8 @@
 # the full design rationale (including why these four axes are bundled onto
 # one dataset instead of split, unlike format_validation/refusal) and
 # CONTRIBUTING.md for how to add more cases.
-# yaml-language-server: $schema=hotpotqa_hard_schema.json
-name: hotpotqa_hard
+# yaml-language-server: $schema=wikipedia_answer_quality_schema.json
+name: wikipedia_answer_quality
 cases:
 - name: hard_comparison_000_were_scott_derrickson_and_ed_wood
   inputs: Were Scott Derrickson and Ed Wood of the same nationality?

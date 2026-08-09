@@ -68,9 +68,10 @@ unanswerable in principle) and *how* it's phrased (a direct question reads
 very differently from a colloquial or implicit one) — testing whether
 refusal holds up beyond the cleanest, most obvious phrasing.
 
-**Answer quality (correctness, faithfulness, relevance, safety)** — the
-first dataset that grades whether an answer is actually *good*, not just
-present (`format_validation`) or appropriately declined (`refusal`). Four
+**Answer quality (correctness, faithfulness, relevance, safety)**
+(`wikipedia_answer_quality`) — the first dataset that grades whether an
+answer is actually *good*, not just present (`format_validation`) or
+appropriately declined (`refusal`). Four
 `LLMJudge` axes over the same 50 hard, multi-hop HotpotQA questions:
 correctness (does the answer match the known gold answer, judged
 semantically), faithfulness (is every claim grounded in what
@@ -111,7 +112,7 @@ recur on the second run, but a single run isn't enough to call it resolved
 either way — LLM judges (and, per below, the underlying API's content
 filtering) aren't perfectly deterministic.
 
-**hotpotqa_hard**: the first live run surfaced an eval-*infrastructure*
+**Wikipedia answer quality** (`wikipedia_answer_quality`): the first live run surfaced an eval-*infrastructure*
 finding rather than an agent-quality one — `evaluations/run.py`'s
 `evaluate_sync()` call had no `max_concurrency` cap, so all 50 cases fired
 simultaneously and 46-50% failed outright (connection errors, tool-retry
