@@ -43,24 +43,36 @@ caller, not a refactor.
 app/config.py   — Settings
 app/prompts.py  — SYSTEM_PROMPT
 app/tools.py    — search_wikipedia (sync, httpx.Client)
-app/agent.py    — build_agent(model=None) -> Agent
-app/runner.py   — run_agent(agent, question, deps) -> RunTranscript
-app/cli.py      — argparse, error handling, format_transcript(), main(), __main__
+app/agent.py       — build_agent(model=None) -> Agent
+app/runner.py      — run_agent(agent, question, deps) -> RunTranscript
+app/query_agent.py — argparse, error handling, format_transcript(), main(), __main__
 ```
 
-Dependencies flow one direction only: `cli.py` → `agent.py`, `runner.py` →
-`config.py`, `tools.py`, `prompts.py`. Nothing in `agent.py`, `runner.py`,
-`tools.py`, `config.py`, or `prompts.py` imports `cli.py` — the CLI is a thin
-consumer of the agent's API, not the other way around. This was a real
-design mistake caught mid-brainstorm (an earlier draft had `agent.py`'s
-`__main__` importing `cli.py`, i.e. core importing presentation) and is
-called out here so it doesn't regress: **`app/agent.py` must stay free of
-argparse, printing, and CLI-specific error formatting.**
+`query_agent.py` (not `cli.py`): "CLI" describes a category (anything runnable
+from a terminal), not what this specific module does. This module asks the
+agent a single question and prints the audited answer — `query_agent` names
+that action directly. It also disambiguates it from the eval suite, which
+will be an equally-named, equally specific `app/evals.py` later — two named
+capabilities instead of one vague "CLI" with a hidden mode inside it. It is
+deliberately *not* named `chat.py`: this is single-shot (one question in, one
+answer out, process exits), not a multi-turn conversation loop with threaded
+`message_history` — a name implying otherwise would misdescribe the code.
+
+Dependencies flow one direction only: `query_agent.py` → `agent.py`,
+`runner.py` → `config.py`, `tools.py`, `prompts.py`. Nothing in `agent.py`,
+`runner.py`, `tools.py`, `config.py`, or `prompts.py` imports
+`query_agent.py` — it's a thin consumer of the agent's API, not the other way
+around. This was a real design mistake caught mid-brainstorm (an earlier
+draft had `agent.py`'s `__main__` importing the CLI module directly, i.e.
+core importing presentation) and is called out here so it doesn't regress:
+**`app/agent.py` must stay free of argparse, printing, and CLI-specific
+error formatting.**
 
 The eval suite (built later) will import `build_agent` from `app/agent.py`
-and `run_agent` from `app/runner.py` directly — never `app/cli.py`. The CLI's
-formatted text output (see below) is for a human reading a terminal, not a
-stable interface; the eval suite works with `RunTranscript` objects.
+and `run_agent` from `app/runner.py` directly — never `app/query_agent.py`.
+`query_agent.py`'s formatted text output (see below) is for a human reading
+a terminal, not a stable interface; the eval suite works with
+`RunTranscript` objects directly.
 
 ## `app/config.py`
 
@@ -154,8 +166,8 @@ what happens when the caller doesn't supply a model.
 
 This is the loose-coupling seam: tests call `build_agent(TestModel())` or
 `build_agent(FunctionModel(...))` — no `.env`, no network, no `mock.patch`.
-Production code (`cli.py`, later the eval suite) calls `build_agent()` with
-no arguments.
+Production code (`query_agent.py`, later the eval suite) calls
+`build_agent()` with no arguments.
 
 `app/agent.py` contains **only** this function. No `__main__`, no argparse,
 no printing — see the dependency-direction note above.
@@ -198,8 +210,8 @@ copy of it.
 
 `run_agent` either returns a `RunTranscript` or raises. No error field, no
 try/except inside it — see Out of scope. This is also this project's one
-"public API": `cli.py` calls it now, the eval suite will call it later, both
-get the identical audited behavior.
+"public API": `query_agent.py` calls it now, the eval suite will call it
+later, both get the identical audited behavior.
 
 `deps: httpx.Client` lifecycle is owned by the caller (`with httpx.Client()
 as client:`), not by `run_agent` or `build_agent` — a factory function
@@ -208,7 +220,7 @@ right scope differs by caller (CLI: one client per single question;
 eval suite, later: one client reused across an entire batch for connection
 pooling).
 
-## `app/cli.py`
+## `app/query_agent.py`
 
 ```python
 def format_transcript(transcript: RunTranscript) -> str:
@@ -281,13 +293,14 @@ Per CLAUDE.md's existing test-pyramid principle:
 ## CLAUDE.md updates required alongside implementation
 
 - Commands section: `uv run python -m app.agent "your question"` becomes
-  `uv run python -m app.cli "your question"`; the `--demo` line is removed
-  (demo/sample-question coverage becomes part of the eval suite instead of a
-  CLI flag, per explicit decision this session).
-- Architecture section: list `app/config.py`, `app/runner.py`, `app/cli.py`
-  alongside the existing `app/agent.py`, `app/prompts.py`, `app/tools.py`,
-  with the one-line responsibility split matching this doc's file layout —
-  including the "CLI depends on agent, never the reverse" direction.
+  `uv run python -m app.query_agent "your question"`; the `--demo` line is
+  removed (demo/sample-question coverage becomes part of the eval suite
+  instead of a CLI flag, per explicit decision this session).
+- Architecture section: list `app/config.py`, `app/runner.py`,
+  `app/query_agent.py` alongside the existing `app/agent.py`,
+  `app/prompts.py`, `app/tools.py`, with the one-line responsibility split
+  matching this doc's file layout — including the "query_agent depends on
+  agent, never the reverse" direction.
 - New explicit **Auditability** requirement (this was the user's stated
   "critical" constraint and needs to be durable, not just tribal knowledge
   from this conversation): every agent run must produce an inspectable
