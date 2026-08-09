@@ -11,6 +11,13 @@ constraint from that spec — no built-in hosted search/RAG tools (e.g.
 Anthropic's `web_search` tool type); the retrieval integration must be
 hand-built.
 
+**`docs/design_rationale.md`** is deliverable #3's living draft — update it
+whenever a new eval dataset, finding, or prompt/agent iteration lands, not
+only at the end. It's structured to match the assignment's required
+sections exactly (prompt rationale, eval design rationale, successes/
+failures learned from evals, iterations made, extension ideas, time spent)
+so nothing has to be reconstructed from git history later.
+
 ## Commands
 
 ```bash
