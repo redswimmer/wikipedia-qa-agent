@@ -122,9 +122,42 @@ evaluator-level retry (both native `pydantic_evals`/`pydantic_ai` mechanisms
 — see `evaluations/run.py`); every case that did complete before the fix
 produced a real grade across all six evaluator columns (no missing/blank
 cells), confirming the failures were a load problem, not a correctness one.
-Post-fix, 49/50 cases completed (versus 23-25/50 across two pre-fix runs),
-with an 85.7% aggregate assertion pass rate across all six evaluator columns
-for the completed cases.
+Post-fix, 49/50 cases completed across two independent live runs (versus
+23-25/50 across two pre-fix runs), with an 85.7% and 87.8% aggregate
+assertion pass rate respectively across all six evaluator columns for the
+completed cases — consistent enough between runs to trust the number, not
+a one-off.
+
+Two genuine agent-quality failure modes emerged from the completed cases,
+both caught by `correctness` specifically (`faithfulness`/`relevance`/
+`safety` stayed near-perfect throughout):
+
+- **Wrong entity, confidently stated.** One case's expected answer was
+  "Animorphs"; the agent answered "Lorien Legacies" — a different book
+  series entirely, not a paraphrase or partial match. The judge caught
+  this cleanly (`correctness: ✗`), and `faithfulness`/`relevance` still
+  passed on the same case, showing the four axes catch genuinely different
+  failure shapes: a confidently wrong answer can still be internally
+  faithful to a mis-retrieved source and still be on-topic.
+- **Right answer, wrong granularity.** Another case's expected answer was
+  "Greenwich Village, New York City"; the agent answered only "New York
+  City" — correct as far as it goes, but missing the specific locale the
+  gold answer names. This is the harder failure mode to fix: it's not
+  hallucination or irrelevance, just under-specification relative to what
+  the question's gold answer actually resolves to.
+
+One infrastructure-adjacent finding held up across all three live runs of
+this dataset (pre- and post-concurrency-fix alike): the exact same case,
+`hard_bridge_006` ("Who was known by his stage name Aladin and helped
+organizations improve their performance as a consultant?"), fails
+identically every single time with `UnexpectedModelBehavior: Tool
+'search_wikipedia' exceeded max retries count of 1` — not random flakiness,
+a deterministic failure tied to this specific question. "Aladin" is
+plausibly an ambiguous search term (easily confused with "Aladdin" in
+search results), and the agent's tool-retry budget of 1 isn't enough
+headroom to recover from a genuinely hard-to-resolve query, independent of
+the concurrency fix. Worth a follow-up (see Section 5) rather than
+something this pass's concurrency fix was ever going to solve.
 
 **Everything else was handled cleanly from the start** — all unanswerable
 cases and most unsafe cases scored full marks, including one response that
@@ -200,14 +233,21 @@ ones.
 
 ## 5. How I'd extend this with more time
 
-- More eval dimensions: does the answer actually match the expected one
-  (correctness), is it actually grounded in what was retrieved rather than
-  just plausible-sounding (faithfulness), and did the agent search with a
-  query that matches the question's intent (relevancy).
-- Validate the judge itself against human-labeled examples before trusting
-  it further — right now its alignment with human judgment is assumed, not
-  measured.
-- Scale up case counts once correctness grading exists to pair with them.
+- Validate the judges themselves against human-labeled examples before
+  trusting them further — right now their alignment with human judgment is
+  assumed, not measured. This is the biggest open gap: every rubric in this
+  suite (including `wikipedia_answer_quality`'s four) was hand-authored with
+  synthetic few-shot examples, not calibrated against a labeled dataset.
+- Investigate the reproducible tool-retry-exhaustion failure on
+  `hard_bridge_006` (Section 3) — it failed identically across all three
+  live runs of `wikipedia_answer_quality`, suggesting the agent's tool-retry
+  budget of 1 isn't enough headroom for genuinely ambiguous search terms.
+  Worth trying a slightly higher per-tool retry budget and re-running to see
+  if it resolves, versus accepting that some fraction of hard multi-hop
+  questions will always exhaust a low retry budget.
+- Scale `wikipedia_answer_quality` beyond 50 cases now that the pattern
+  (four bundled `LLMJudge` axes plus a tool-call budget) is proven — the
+  main cost is live-run time/money, not design work.
 - Wire eval pass-rate thresholds into CI so a regression is visible
   without someone remembering to run the suite by hand.
 
