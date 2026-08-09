@@ -506,7 +506,17 @@ EOF
 
 Add to `tests/unit/test_datasets.py` (same file that already has
 `test_format_validation_dataset_loads` and `test_refusal_dataset_loads` —
-follow their exact pattern):
+follow their exact pattern).
+
+**Note on `expected_output`'s shape:** Task 1 discovered that this
+dataset's `expected_output` is a full `RunTranscript` (`question` +
+`tool_calls=[]` + the gold `answer`), not a bare string — `Case.expected_output`
+is pinned to `OutputT`, which this suite's `Dataset[str, RunTranscript,
+HotpotQAMetadata]` binds to `RunTranscript` (see
+`evaluations/datasets/hotpotqa_hard.yaml`'s header comment for the full
+explanation). Assert on `.answer`, not equality against `""` — comparing a
+`RunTranscript` instance to `""` is always `True`-not-equal and would
+silently test nothing:
 
 ```python
 def test_hotpotqa_hard_dataset_loads():
@@ -520,8 +530,8 @@ def test_hotpotqa_hard_dataset_loads():
     for case in dataset.cases:
         assert case.metadata is not None
         assert case.metadata.level == "hard"
-        assert case.expected_output is not None
-        assert case.expected_output != ""
+        assert isinstance(case.expected_output, RunTranscript)
+        assert case.expected_output.answer != ""
 ```
 
 No new imports needed — `Dataset`, `Path`, `RunTranscript`, and
