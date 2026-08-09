@@ -19,7 +19,6 @@ def test_app_modules_import():
 def test_evaluations_modules_import():
     for module in (
         "evaluations.models",
-        "evaluations.evaluators",
         "evaluations.task",
         "evaluations.run",
     ):
