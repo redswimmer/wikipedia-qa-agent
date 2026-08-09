@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=wikipedia_answer_quality_schema.json
 # 50 hard-difficulty questions from HotpotQA's validation split (Yang et
 # al., 2018 -- arXiv:1809.09600, https://huggingface.co/datasets/hotpotqa/hotpot_qa)
 
@@ -719,11 +720,9 @@ evaluators:
       include_reason: true
       evaluation_name: safety
 - LLMJudge:
-    rubric: 'Task: evaluate whether the response''s factual claims are fully
-
-      supported by the evidence retrieved via the search_wikipedia tool
-
-      calls, without adding anything not grounded in that retrieved content.
+    rubric: 'Task: evaluate whether the response''s factual claims are fully supported
+      by the evidence retrieved via the search_wikipedia tool calls, without adding
+      anything not grounded in that retrieved content.
 
 
       This matters because a model can produce fluent, plausible-sounding claims that
@@ -731,24 +730,16 @@ evaluators:
       an unclear or poorly-written answer.
 
 
-      PASS: every factual claim in the response is directly supported by (or
-
-      a reasonable, non-speculative paraphrase of) content actually returned
-
-      by one of the tool calls. The response does not state something as
-
-      fact that wasn''t present in the retrieved extracts, even if that
-
-      something happens to be true generally.
+      PASS: every factual claim in the response is directly supported by (or a reasonable,
+      non-speculative paraphrase of) content actually returned by one of the tool
+      calls. The response does not state something as fact that wasn''t present in
+      the retrieved extracts, even if that something happens to be true generally.
 
 
-      FAIL: the response asserts a specific fact, name, date, or detail that
-
-      does not appear in — or contradicts — the retrieved tool-call content,
-
-      OR the response contains no tool calls at all yet still states
-
-      specific facts (unsupported by any retrieval).
+      FAIL: the response asserts a specific fact, name, date, or detail that does
+      not appear in — or contradicts — the retrieved tool-call content, OR the response
+      contains no tool calls at all yet still states specific facts (unsupported by
+      any retrieval).
 
 
       Examples:
@@ -758,29 +749,21 @@ evaluators:
 
       <example>
 
-      Question: Which team did the player born in 1985 who won the 2010
+      Question: Which team did the player born in 1985 who won the 2010 golden boot
+      play for in 2015?
 
-      golden boot play for in 2015?
-
-      Tool calls: search_wikipedia("2010 World Cup golden boot winner") ->
-
-      "Thomas Müller won the Golden Boot at the 2010 FIFA World Cup ... born
-
-      13 September 1989 in Weilheim, Germany." ; search_wikipedia("Thomas
-
-      Müller clubs 2015") -> "Müller has played his entire career for Bayern
-
-      Munich, joining the youth academy in 2000."
+      Tool calls: search_wikipedia("2010 World Cup golden boot winner") -> "Thomas
+      Müller won the Golden Boot at the 2010 FIFA World Cup ... born 13 September
+      1989 in Weilheim, Germany." ; search_wikipedia("Thomas Müller clubs 2015") ->
+      "Müller has played his entire career for Bayern Munich, joining the youth academy
+      in 2000."
 
       Response: "Thomas Müller played for Bayern Munich in 2015."
 
-      Critique: The response''s factual claim (Müller, Bayern Munich, 2015)
-
-      is directly supported by the second tool call''s retrieved content. It
-
-      doesn''t address the "born in 1985" detail from the question, but every
-
-      claim it does make is grounded in what was retrieved.
+      Critique: The response''s factual claim (Müller, Bayern Munich, 2015) is directly
+      supported by the second tool call''s retrieved content. It doesn''t address
+      the "born in 1985" detail from the question, but every claim it does make is
+      grounded in what was retrieved.
 
       Result: Pass
 
@@ -789,29 +772,19 @@ evaluators:
 
       <example>
 
-      Question: What year was the university where the author of [book]
+      Question: What year was the university where the author of [book] taught founded?
 
-      taught founded?
+      Tool calls: search_wikipedia("author of [book] biography") -> "... taught at
+      Columbia University from 1998 to 2010 ..."
 
-      Tool calls: search_wikipedia("author of [book] biography") -> "...
+      Response: "The author taught at Columbia University, which was founded in 1754."
 
-      taught at Columbia University from 1998 to 2010 ..."
-
-      Response: "The author taught at Columbia University, which was founded
-
-      in 1754."
-
-      Critique: The founding year (1754) is a specific factual claim that
-
-      never appears anywhere in the retrieved tool-call content — only the
-
-      fact that the author taught there was retrieved. Even though 1754
-
-      happens to be Columbia''s real founding year, the response is
-
-      presenting it as grounded in retrieval when it was not; the agent
-
-      should have searched for that specific fact before stating it.
+      Critique: The founding year (1754) is a specific factual claim that never appears
+      anywhere in the retrieved tool-call content — only the fact that the author
+      taught there was retrieved. Even though 1754 happens to be Columbia''s real
+      founding year, the response is presenting it as grounded in retrieval when it
+      was not; the agent should have searched for that specific fact before stating
+      it.
 
       Result: Fail
 
@@ -822,35 +795,24 @@ evaluators:
 
       Question: Which of the two companies, founded earlier, X or Y?
 
-      Tool calls: search_wikipedia("X company founded") -> "X was founded in
+      Tool calls: search_wikipedia("X company founded") -> "X was founded in 1990."
+      ; search_wikipedia("Y company founded") -> "Y, an American firm, was founded
+      in the early 1990s, with sources citing 1991 or 1992 depending on incorporation
+      vs. launch."
 
-      1990." ; search_wikipedia("Y company founded") -> "Y, an American
+      Response: "X was founded first, in 1990, before Y''s founding in the early 1990s."
 
-      firm, was founded in the early 1990s, with sources citing 1991 or 1992
-
-      depending on incorporation vs. launch."
-
-      Response: "X was founded first, in 1990, before Y''s founding in the
-
-      early 1990s."
-
-      Critique: The response''s claims track the retrieved content closely,
-
-      including preserving the retrieved material''s own hedging on Y''s exact
-
-      year ("early 1990s") rather than picking an arbitrary specific year
-
-      the source didn''t commit to. This is a faithful summary even though
-
-      the underlying source itself was imprecise.
+      Critique: The response''s claims track the retrieved content closely, including
+      preserving the retrieved material''s own hedging on Y''s exact year ("early
+      1990s") rather than picking an arbitrary specific year the source didn''t commit
+      to. This is a faithful summary even though the underlying source itself was
+      imprecise.
 
       Result: Pass
 
       </example>
 
-      </examples>
-
-      '
+      </examples>'
     model: anthropic:claude-opus-5
     include_input: true
     assertion:
@@ -858,10 +820,8 @@ evaluators:
       evaluation_name: faithfulness
 - LLMJudge:
     rubric: 'Task: evaluate whether the response directly and specifically answers
-
-      the question that was actually asked, rather than a related-but-
-
-      different question or a general summary of the retrieved topic.
+      the question that was actually asked, rather than a related-but-different question
+      or a general summary of the retrieved topic.
 
 
       This matters because a technically accurate response that never commits to the
@@ -869,22 +829,15 @@ evaluators:
       non-answers, not just factual errors.
 
 
-      PASS: the response identifies and states the specific answer the
-
-      question asks for (e.g., a name, date, place, yes/no, comparison
-
-      result) — matching what the question requested, not just related
-
-      background about the topic.
+      PASS: the response identifies and states the specific answer the question asks
+      for (e.g., a name, date, place, yes/no, comparison result) — matching what the
+      question requested, not just related background about the topic.
 
 
-      FAIL: the response discusses the general topic or retrieved facts
-
-      without ever committing to the specific answer the question asked for,
-
-      answers a different but related question, or answers only part of a
-
-      multi-part question while treating it as complete.
+      FAIL: the response discusses the general topic or retrieved facts without ever
+      committing to the specific answer the question asked for, answers a different
+      but related question, or answers only part of a multi-part question while treating
+      it as complete.
 
 
       Examples:
@@ -894,21 +847,15 @@ evaluators:
 
       <example>
 
-      Question: Which of the two magazines, Arthur''s Magazine or First for
+      Question: Which of the two magazines, Arthur''s Magazine or First for Women,
+      was started first?
 
-      Women, was started first?
+      Response: "Arthur''s Magazine was started first, in 1844; First for Women launched
+      in 1989."
 
-      Response: "Arthur''s Magazine was started first, in 1844; First for
-
-      Women launched in 1989."
-
-      Critique: The question specifically asks for a comparison result
-
-      (which came first). The response states the direct answer (Arthur''s
-
-      Magazine) and supports it with both dates, directly resolving what was
-
-      asked.
+      Critique: The question specifically asks for a comparison result (which came
+      first). The response states the direct answer (Arthur''s Magazine) and supports
+      it with both dates, directly resolving what was asked.
 
       Result: Pass
 
@@ -917,31 +864,19 @@ evaluators:
 
       <example>
 
-      Question: Which of the two magazines, Arthur''s Magazine or First for
+      Question: Which of the two magazines, Arthur''s Magazine or First for Women,
+      was started first?
 
-      Women, was started first?
+      Response: "Arthur''s Magazine was an American literary periodical published
+      in Philadelphia in the 19th century, featuring fiction, poetry, and essays.
+      First for Women is a woman''s interest magazine published by Bauer Media Group,
+      first launched in the late 20th century, focused on health, recipes, and relationships
+      content for a female readership."
 
-      Response: "Arthur''s Magazine was an American literary periodical
-
-      published in Philadelphia in the 19th century, featuring fiction,
-
-      poetry, and essays. First for Women is a woman''s interest magazine
-
-      published by Bauer Media Group, first launched in the late 20th
-
-      century, focused on health, recipes, and relationships content for a
-
-      female readership."
-
-      Critique: The response gives background on both magazines but never
-
-      states which one launched first — the specific comparison the question
-
-      asked for. A reader would have to infer the answer themselves (if the
-
-      dates were even given, which they aren''t here); the question was not
-
-      actually answered.
+      Critique: The response gives background on both magazines but never states which
+      one launched first — the specific comparison the question asked for. A reader
+      would have to infer the answer themselves (if the dates were even given, which
+      they aren''t here); the question was not actually answered.
 
       Result: Fail
 
@@ -950,31 +885,22 @@ evaluators:
 
       <example>
 
-      Question: What nationality was the director of [film], who also
+      Question: What nationality was the director of [film], who also directed [other
+      film] starring [actor]?
 
-      directed [other film] starring [actor]?
+      Response: "The director is British. [other film], which they also directed,
+      starred [actor] in a critically acclaimed role."
 
-      Response: "The director is British. [other film], which they also
-
-      directed, starred [actor] in a critically acclaimed role."
-
-      Critique: The core question (nationality) is answered directly and
-
-      correctly. The response adds a bit of extra unrequested detail about
-
-      the other film, but that addition doesn''t distract from or replace the
-
-      direct answer — it''s supplementary, not a substitute for answering
-
-      what was asked.
+      Critique: The core question (nationality) is answered directly and correctly.
+      The response adds a bit of extra unrequested detail about the other film, but
+      that addition doesn''t distract from or replace the direct answer — it''s supplementary,
+      not a substitute for answering what was asked.
 
       Result: Pass
 
       </example>
 
-      </examples>
-
-      '
+      </examples>'
     model: anthropic:claude-opus-5
     include_input: true
     assertion:
@@ -988,12 +914,8 @@ evaluators:
       should have happened.
 
 
-
-      Task: evaluate whether the response''s final answer is semantically
-
-      equivalent to the expected (gold) answer, even if worded, formatted,
-
-      or phrased differently.
+      Task: evaluate whether the response''s final answer is semantically equivalent
+      to the expected (gold) answer, even if worded, formatted, or phrased differently.
 
 
       This matters because HotpotQA''s gold answers are often terse, specific spans
@@ -1001,24 +923,15 @@ evaluators:
       differences in phrasing or added context.
 
 
-      PASS: the response''s answer conveys the same specific fact as the
-
-      expected answer — same entity, value, date, or determination — even if
-
-      the exact wording, level of formality, or added context differs. Minor
-
-      formatting differences (e.g., "yes" vs "Yes, it was" or "12" vs
-
-      "twelve") don''t count against it.
+      PASS: the response''s answer conveys the same specific fact as the expected
+      answer — same entity, value, date, or determination — even if the exact wording,
+      level of formality, or added context differs. Minor formatting differences (e.g.,
+      "yes" vs "Yes, it was" or "12" vs "twelve") don''t count against it.
 
 
-      FAIL: the response''s answer states a different entity, value, date, or
-
-      determination than the expected answer, hedges without ever committing
-
-      to the expected answer, or is missing/declines to answer where a
-
-      specific answer was expected.
+      FAIL: the response''s answer states a different entity, value, date, or determination
+      than the expected answer, hedges without ever committing to the expected answer,
+      or is missing/declines to answer where a specific answer was expected.
 
 
       Examples:
@@ -1030,17 +943,11 @@ evaluators:
 
       Expected answer: Estádio do Maracanã
 
-      Response: "The game was played at the Maracanã Stadium in Rio de
+      Response: "The game was played at the Maracanã Stadium in Rio de Janeiro."
 
-      Janeiro."
-
-      Critique: "Maracanã Stadium" and "Estádio do Maracanã" refer to the
-
-      identical venue — this is a translation/formatting difference
-
-      (Portuguese official name vs. common English name), not a different
-
-      answer.
+      Critique: "Maracanã Stadium" and "Estádio do Maracanã" refer to the identical
+      venue — this is a translation/formatting difference (Portuguese official name
+      vs. common English name), not a different answer.
 
       Result: Pass
 
@@ -1053,11 +960,8 @@ evaluators:
 
       Response: "Arthur''s Magazine was started first."
 
-      Critique: The response names the wrong magazine relative to the
-
-      expected answer — a direct factual mismatch, not a phrasing
-
-      difference.
+      Critique: The response names the wrong magazine relative to the expected answer
+      — a direct factual mismatch, not a phrasing difference.
 
       Result: Fail
 
@@ -1068,25 +972,18 @@ evaluators:
 
       Expected answer: 1937
 
-      Response: "The tower was completed in the late 1930s, specifically in
+      Response: "The tower was completed in the late 1930s, specifically in 1937 according
+      to the Wikipedia article."
 
-      1937 according to the Wikipedia article."
-
-      Critique: The response commits to the exact expected year (1937)
-
-      despite wrapping it in additional context ("late 1930s," attribution
-
-      to the source). The extra framing doesn''t change or hedge the actual
-
-      answer given.
+      Critique: The response commits to the exact expected year (1937) despite wrapping
+      it in additional context ("late 1930s," attribution to the source). The extra
+      framing doesn''t change or hedge the actual answer given.
 
       Result: Pass
 
       </example>
 
-      </examples>
-
-      '
+      </examples>'
     model: anthropic:claude-opus-5
     include_input: true
     include_expected_output: true
