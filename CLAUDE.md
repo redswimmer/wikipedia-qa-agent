@@ -39,37 +39,26 @@ lockfile, not an isolated venv.
 
 ## Design principles
 
-These are binding constraints on how `app/` code gets structured, not just
-style preferences:
+Guiding constraints for how code in this repo should be shaped — apply
+judgment about what they mean concretely once the actual design takes shape;
+don't treat any specific class/module name below as prescribed.
 
-- **Clean Code / SOLID.** Small, single-responsibility functions and classes.
-  Depend on abstractions at seams that need to be swapped or faked in tests,
-  not on concrete I/O clients directly. The `agent.py` / `prompts.py` /
-  `tools.py` split is itself an SRP boundary — keep it that way as the
-  implementation grows rather than collapsing logic back into one file.
+- **Clean Code / SOLID.** Small, single-responsibility units. Depend on
+  abstractions at seams that need to be swapped or faked in tests, not on
+  concrete I/O clients directly.
 - **Functional core, imperative shell** ([cosmicpython ch. 3](https://www.cosmicpython.com/book/chapter_03_abstractions.html)).
-  Keep business logic — deciding what to search for, how to combine search
-  results into an answer, eval scoring — as pure functions over plain data
-  (dicts, dataclasses, tuples), separate from the I/O shell (real Wikipedia
-  HTTP calls, real Anthropic API calls). Reach for a simplifying data
-  structure (e.g. a plain `SearchResult`) before reaching for a class
-  hierarchy.
-- **Carve out a seam for Wikipedia access.** Put the real Wikipedia
-  integration behind a small interface (e.g. a `WikipediaClient` protocol
-  with a `search(query) -> ...` method) so `app/tools.py` depends on that
-  abstraction, not directly on `requests`/MediaWiki specifics. Tests should
-  inject a fake implementation rather than `mock.patch`-ing the real one —
-  fakes surface design problems that patching hides.
+  Keep business logic as pure functions over plain data, separate from the
+  I/O shell (network/API calls). Favor a simplifying data structure over a
+  class hierarchy when one will do.
+- **Fakes over patches.** Put I/O integrations behind an abstraction so tests
+  can inject a fake implementation rather than `mock.patch`-ing the real
+  one — fakes surface design problems that patching hides.
 - **Test pyramid: high gear vs. low gear** ([cosmicpython ch. 5](https://www.cosmicpython.com/book/chapter_05_high_gear_low_gear.html)).
-  Most tests should sit at the "service layer": running the agent
-  edge-to-edge against a fake `WikipediaClient` and Pydantic AI's
-  `TestModel`/`FunctionModel` (see `ai:building-pydantic-ai-agents` skill),
-  exercising real business-logic edge cases without real network/API calls.
-  Keep a small number of true unit tests for pure domain logic fiddly enough
-  to want direct coverage, and delete them once service-layer tests cover
-  the same ground. Reserve real end-to-end tests (real Anthropic + real
-  Wikipedia) for a handful of smoke cases — that's the eval suite's job, not
-  the pytest suite's.
+  Most tests should sit at the service layer — edge-to-edge, with fakes
+  standing in for I/O — exercising business-logic edge cases without real
+  network/API calls. Keep a small core of true unit tests for pure logic
+  fiddly enough to want direct coverage. Reserve real end-to-end runs for a
+  handful of smoke cases.
 
 ## Architecture
 
