@@ -21,6 +21,14 @@ from app.bootstrap import resolve_real_model
 from app.runner import run_agent_streaming
 from app.tools import build_wikipedia_client
 
+_DIM = "\033[2m"
+_BOLD_CYAN = "\033[1;36m"
+_RESET = "\033[0m"
+
+
+def _colorize(text: str, code: str, *, enabled: bool) -> str:
+    return f"{code}{text}{_RESET}" if enabled else text
+
 
 def _format_progress_line(event: AgentStreamEvent) -> str | None:
     if isinstance(event, FunctionToolCallEvent):
@@ -42,22 +50,24 @@ def _text_delta(event: AgentStreamEvent) -> str | None:
 
 
 async def _print_progress(ctx: RunContext, events: AsyncIterable[AgentStreamEvent]) -> None:
+    stdout_color = sys.stdout.isatty()
+    stderr_color = sys.stderr.isatty()
     tool_calls_started = False
     answer_started = False
     async for event in events:
         delta = _text_delta(event)
         if delta is not None:
             if not answer_started:
-                print("\nAnswer:")
+                print(_colorize("\nAnswer:", _BOLD_CYAN, enabled=stdout_color))
                 answer_started = True
             print(delta, end="", flush=True)
             continue
         line = _format_progress_line(event)
         if line is not None:
             if not tool_calls_started:
-                print("Tool calls:", file=sys.stderr)
+                print(_colorize("Tool calls:", _DIM, enabled=stderr_color), file=sys.stderr)
                 tool_calls_started = True
-            print(line, file=sys.stderr)
+            print(_colorize(line, _DIM, enabled=stderr_color), file=sys.stderr)
 
 
 def main(

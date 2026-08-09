@@ -84,6 +84,14 @@ def test_text_delta_for_unrelated_event_is_none():
     assert query_agent._text_delta(event) is None
 
 
+def test_colorize_wraps_text_in_ansi_code_when_enabled():
+    assert query_agent._colorize("hi", "\033[2m", enabled=True) == "\033[2mhi\033[0m"
+
+
+def test_colorize_returns_plain_text_when_disabled():
+    assert query_agent._colorize("hi", "\033[2m", enabled=False) == "hi"
+
+
 def test_print_progress_streams_text_deltas_to_stdout_and_tool_events_to_stderr(capsys):
     events = [
         FunctionToolCallEvent(
