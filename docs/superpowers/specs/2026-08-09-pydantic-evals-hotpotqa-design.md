@@ -278,15 +278,23 @@ module:
 
 ## Not wired into pytest/CI
 
-Evals hit the real Anthropic API and live Wikipedia — slow, costly, and
-flaky to run on every commit. They stay a manual `uv run python -m
-evaluations.run format_validation` command, never invoked by
-pytest/pre-commit/CI. `TranscriptWellFormed.evaluate()`'s pure logic does
-get a fast unit test (`tests/unit/test_evaluators.py`, constructed
-`RunTranscript` fixtures, no live calls, no `EvaluatorContext` network
-dependency) — consistent with CLAUDE.md's test-pyramid principle. Light unit
-coverage is also added for the two new `app/` functions
-(`resolve_real_model`, `build_wikipedia_client`) alongside existing
+To be precise about what this does and doesn't mean: only the *live* eval
+run (`uv run python -m evaluations.run format_validation`, which hits the
+real Anthropic API and live Wikipedia — slow, costly, and flaky to run on
+every commit) is excluded from automatic gates. It stays a manual command,
+never invoked by pytest/pre-commit/CI.
+
+Code quality on `evaluations/*.py` itself is **not** excluded — `ruff
+check`/`ruff format` and `ty check` have no path restrictions in this repo
+(`pyproject.toml`, `.pre-commit-config.yaml`) and already run repo-wide, so
+every file under `evaluations/` gets linted, formatted, and type-checked on
+every commit and in CI exactly like `app/`, with no config changes needed.
+`TranscriptWellFormed.evaluate()`'s pure logic does get a fast unit test
+(`tests/unit/test_evaluators.py`, constructed `RunTranscript` fixtures, no
+live calls) that pytest picks up automatically since `testpaths = ["tests"]`
+— consistent with CLAUDE.md's test-pyramid principle. Light unit coverage is
+also added for the two new `app/` functions (`resolve_real_model`,
+`build_wikipedia_client`) alongside existing
 `test_agent.py`/`test_tools.py`.
 
 ## Scaling to more datasets (illustrative — not built this pass)
