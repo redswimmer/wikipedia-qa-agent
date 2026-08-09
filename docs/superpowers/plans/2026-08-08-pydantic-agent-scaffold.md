@@ -152,7 +152,9 @@ def test_parse_search_title_returns_none_when_no_results():
 
 
 def test_parse_extract_returns_first_nonempty_extract():
-    response_json = {"query": {"pages": {"12345": {"extract": "Ada Lovelace was a mathematician."}}}}
+    response_json = {
+        "query": {"pages": {"12345": {"extract": "Ada Lovelace was a mathematician."}}}
+    }
 
     assert parse_extract(response_json) == "Ada Lovelace was a mathematician."
 
@@ -241,7 +243,9 @@ def search_wikipedia(ctx: RunContext[httpx.Client], query: str) -> str:
     extract_response.raise_for_status()
     extract = parse_extract(extract_response.json())
     if extract is None:
-        raise ModelRetry(f"Found article {title!r} but it has no text extract. Try a different query.")
+        raise ModelRetry(
+            f"Found article {title!r} but it has no text extract. Try a different query."
+        )
 
     return extract
 ```
