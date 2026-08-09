@@ -12,13 +12,12 @@ Requires [uv](https://docs.astral.sh/uv/) and an [Anthropic API key](https://con
 # Install Dependencies
 uv sync
 # Copy environment example and set your Anthropic API key
-cp .env.example .env   # then edit .env and set ANTHROPIC_API_KEY
+cp .env.example .env
 # Query the agent
 uv run python -m app.query_agent "In what year was the Eiffel Tower completed?"
 ```
 
-
-Example Reponse:
+Example Response:
 
 ```
 Question: In what year was the Eiffel Tower completed?

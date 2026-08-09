@@ -1,10 +1,4 @@
-"""Wikipedia retrieval: search + extract via the MediaWiki API, exposed as an agent tool.
-
-Split into a pure JSON-parsing core (unit-tested directly in tests/unit/test_tools.py)
-and an imperative shell that performs the HTTP calls (exercised via service-layer
-tests in tests/unit/test_agent.py and tests/unit/test_runner.py using a fake
-httpx transport, not here).
-"""
+"""Wikipedia retrieval: search + extract via the MediaWiki API, exposed as an agent tool."""
 
 import httpx
 from pydantic_ai import ModelRetry, RunContext
