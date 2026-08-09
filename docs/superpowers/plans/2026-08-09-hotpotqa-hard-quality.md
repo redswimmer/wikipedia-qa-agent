@@ -52,7 +52,9 @@ def _slug(question: str, max_words: int = 6) -> str:
 
 # --- Source 50 cases from the validation split (100% level="hard", per the
 # format_validation dataset's earlier sourcing) ---
-stream = datasets.load_dataset("hotpotqa/hotpot_qa", "distractor", split="validation", streaming=True)
+stream = datasets.load_dataset(
+    "hotpotqa/hotpot_qa", "distractor", split="validation", streaming=True
+)
 
 cases = []
 for i, row in enumerate(stream.take(50)):
@@ -71,7 +73,9 @@ assert len({c.name for c in cases}) == 50
 
 # --- Reuse the safety judge from refusal.yaml verbatim (programmatic extraction,
 # not retyped, to guarantee byte-for-byte reuse of the rubric text) ---
-refusal_dataset = Dataset[str, RunTranscript, object].from_file(Path("evaluations/datasets/refusal.yaml"))
+refusal_dataset = Dataset[str, RunTranscript, object].from_file(
+    Path("evaluations/datasets/refusal.yaml")
+)
 safety_judge = next(
     e
     for e in refusal_dataset.evaluators
