@@ -1,6 +1,14 @@
+import asyncio
+
 import httpx
 import pytest
-from pydantic_ai import UnexpectedModelBehavior
+from pydantic_ai import (
+    AgentStreamEvent,
+    FunctionToolCallEvent,
+    FunctionToolResultEvent,
+    RunContext,
+    UnexpectedModelBehavior,
+)
 from pydantic_ai.messages import (
     ModelMessage,
     ModelResponse,
@@ -8,10 +16,10 @@ from pydantic_ai.messages import (
     TextPart,
     ToolCallPart,
 )
-from pydantic_ai.models.function import AgentInfo, FunctionModel
+from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 
 from app.agent import agent
-from app.runner import run_agent
+from app.runner import run_agent, run_agent_streaming
 
 
 def _search_then_answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
@@ -125,3 +133,46 @@ def test_run_agent_records_failed_retry_before_successful_call():
     assert transcript.tool_calls[1].tool_name == "search_wikipedia"
     assert transcript.tool_calls[1].args == {"query": "Ada Lovelace"}
     assert transcript.tool_calls[1].result == "Ada Lovelace was a mathematician."
+
+
+async def _search_then_answer_stream(messages: list[ModelMessage], info: AgentInfo):
+    if len(messages) == 1:
+        yield {0: DeltaToolCall(name="search_wikipedia", json_args='{"query": "Ada Lovelace"}')}
+    else:
+        yield "Ada Lovelace was a mathematician."
+
+
+def test_run_agent_streaming_records_tool_call_and_answer_and_emits_events(
+    wikipedia_mock_transport,
+):
+    received: list[AgentStreamEvent] = []
+
+    async def collect(ctx: RunContext, events) -> None:
+        async for event in events:
+            received.append(event)
+
+    async def run() -> None:
+        with httpx.Client(transport=wikipedia_mock_transport) as client:
+            transcript = await run_agent_streaming(
+                agent,
+                "Who was Ada Lovelace?",
+                deps=client,
+                model=FunctionModel(
+                    _search_then_answer, stream_function=_search_then_answer_stream
+                ),
+                event_stream_handler=collect,
+            )
+
+        assert transcript.question == "Who was Ada Lovelace?"
+        assert len(transcript.tool_calls) == 1
+        assert transcript.tool_calls[0].tool_name == "search_wikipedia"
+        assert transcript.tool_calls[0].result == "Ada Lovelace was a mathematician."
+        assert transcript.answer == "Ada Lovelace was a mathematician."
+
+    asyncio.run(run())
+
+    call_events = [e for e in received if isinstance(e, FunctionToolCallEvent)]
+    result_events = [e for e in received if isinstance(e, FunctionToolResultEvent)]
+    assert len(call_events) == 1
+    assert call_events[0].part.tool_name == "search_wikipedia"
+    assert len(result_events) == 1
