@@ -24,8 +24,7 @@ uv run pytest                    # full test suite
 uv run pytest tests/unit/test_app_imports.py::test_app_modules_import  # single test
 uv run pre-commit run --all-files  # run every quality gate without committing
 
-uv run python -m app.agent "your question"  # ask a question
-uv run python -m app.agent --demo           # run built-in sample questions
+uv run python -m app.query_agent "your question"  # ask a question
 ```
 
 Every commit runs ruff (lint + format), `ty`, and pytest via pre-commit; the
@@ -147,15 +146,35 @@ needing you to reach into domain internals to set up state, that's a signal
 the service layer is missing an operation — add it, rather than working
 around the gap in the test.
 
+## Auditability
+
+Every agent run must produce an inspectable record of what happened — each
+tool call (name, arguments, result) and the final answer — not just the
+answer text. Build this from Pydantic AI's own message history
+(`result.new_messages()`, walking `ToolCallPart`/`ToolReturnPart`), as
+`app/runner.py`'s `run_agent()` does — not hand-rolled logging, and not a
+mutable context object tools write into themselves (that couples every tool
+to a logging contract and can drift from what the model actually saw).
+
 ## Architecture
 
-- `app/agent.py`, `app/prompts.py`, `app/tools.py` — the agent split into
-  wiring, system instructions, and tool implementations respectively. Built
-  on [Pydantic AI](https://ai.pydantic.dev); see the `ai:building-pydantic-ai-agents`
-  skill for framework patterns (tool registration, structured output,
-  `TestModel`, etc.) rather than re-deriving them here.
+- `app/config.py` — env-driven settings (`Settings`: Anthropic API key + model,
+  read from `.env`).
+- `app/tools.py` — the `search_wikipedia` tool: MediaWiki search + extract
+  retrieval (functional core / imperative shell split within the module).
+- `app/prompts.py` — the agent's system prompt.
+- `app/agent.py` — `build_agent(model=None)`: constructs the `Agent`,
+  registering `search_wikipedia` and resolving the real Anthropic model from
+  `Settings` when no model is given. No CLI/argparse/printing logic.
+- `app/runner.py` — `run_agent(agent, question, deps)`: runs a question
+  through the agent and returns an auditable `RunTranscript` built from
+  Pydantic AI's own message history (see Auditability below). Shared by the
+  CLI and (later) the eval suite — neither depends on the other.
+- `app/query_agent.py` — the CLI entrypoint (`python -m app.query_agent`).
+  The only module with argparse/printing/CLI-specific error handling;
+  depends on `agent.py` and `runner.py`, and nothing else depends on it.
 - `tests/unit/test_app_imports.py` is currently a smoke test only (import-time
-  check on the three `app` modules) — the real eval suite (deliverable #3 of
+  check on the six `app` modules) — the real eval suite (deliverable #3 of
   the assignment) still needs to be built out.
 - `pyproject.toml` sets `pythonpath = ["."]` under `[tool.pytest.ini_options]`.
   This is required: `app/` has no `__init__.py`/package install, so without it
