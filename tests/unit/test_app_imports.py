@@ -9,6 +9,7 @@ def test_app_modules_import():
         "app.tools",
         "app.prompts",
         "app.agent",
+        "app.bootstrap",
         "app.runner",
         "app.query_agent",
     ):

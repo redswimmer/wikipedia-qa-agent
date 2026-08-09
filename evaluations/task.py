@@ -3,7 +3,8 @@
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 
-from app.agent import agent, resolve_real_model
+from app.agent import agent
+from app.bootstrap import resolve_real_model
 from app.runner import RunTranscript, run_agent
 from app.tools import build_wikipedia_client
 

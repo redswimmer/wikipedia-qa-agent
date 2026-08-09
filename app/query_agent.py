@@ -7,7 +7,8 @@ from collections.abc import Callable, Sequence
 from pydantic import ValidationError
 from pydantic_ai.models import KnownModelName, Model
 
-from app.agent import agent, resolve_real_model
+from app.agent import agent
+from app.bootstrap import resolve_real_model
 from app.runner import RunTranscript, run_agent
 from app.tools import build_wikipedia_client
 

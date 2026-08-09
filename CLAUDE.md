@@ -166,9 +166,16 @@ to a logging contract and can drift from what the model actually saw).
   retrieval (functional core / imperative shell split within the module).
 - `app/prompts.py` — the agent's system prompt.
 - `app/agent.py` — the module-level `agent` (registers `search_wikipedia`,
-  no model bound) plus `resolve_real_model(settings=None)`: resolves the
-  real Anthropic model from `Settings` when no settings are given. No
-  CLI/argparse/printing logic.
+  no model bound). Provider-agnostic: no `Settings`/`.env` dependency, no
+  concrete model construction, no CLI/argparse/printing logic — this is the
+  reusable core, tested with `TestModel`/`FunctionModel`, never a real
+  provider.
+- `app/bootstrap.py` — `resolve_real_model(settings=None)`: resolves the
+  real Anthropic model from `Settings` when no settings are given. Kept
+  separate from `agent.py` on purpose — this is the composition root for
+  production wiring (imports `Settings`, `AnthropicModel`,
+  `AnthropicProvider`), not part of the agent's core definition. Used by
+  `query_agent.py` and `evaluations/task.py`, never by `agent.py` itself.
 - `app/runner.py` — `run_agent(agent, question, deps, model)`: runs a
   question through the agent and returns an auditable `RunTranscript` built
   from Pydantic AI's own message history (see Auditability above). Shared
@@ -187,7 +194,7 @@ to a logging contract and can drift from what the model actually saw).
   only if it gets large enough to violate "one clear responsibility", not
   preemptively). `task.py` (`production_task()`: the one production
   entrypoint every dataset's cases run through — wraps
-  `app.agent.resolve_real_model()` + `app.tools.build_wikipedia_client()` +
+  `app.bootstrap.resolve_real_model()` + `app.tools.build_wikipedia_client()` +
   `app.runner.run_agent()`; reused unchanged across every dataset). `run.py`
   (generic: `uv run python -m evaluations.run <dataset_name>` — never
   touched when adding a new dataset, since the dataset name is just an
