@@ -210,9 +210,11 @@ to a logging contract and can drift from what the model actually saw).
   nothing in the committed code imports it. HotpotQA (Yang et al. 2018,
   arXiv:1809.09600, CC-BY-SA-4.0) is extracted to
   `docs/hotpotqa_1809.09600v1.md` for reference.
-- `tests/unit/test_app_imports.py` is currently a smoke test only (import-time
-  check on the six `app` modules) — the real eval suite (deliverable #3 of
-  the assignment) still needs to be built out.
+- `tests/unit/test_app_imports.py` is a smoke test only (import-time check
+  on the six `app` modules) — it does not cover `evaluations/`; the eval
+  suite itself (assignment deliverable #3) lives under `evaluations/` (see
+  above) and currently has one dataset (`format_validation`), with
+  correctness/faithfulness/relevancy datasets still to come.
 - `pyproject.toml` sets `pythonpath = ["."]` under `[tool.pytest.ini_options]`.
   This is required: `app/` has no `__init__.py`/package install, so without it
   pytest's default import mode can't resolve `app.*` imports even though a
