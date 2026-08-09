@@ -39,13 +39,16 @@ def _format_transcript(transcript: RunTranscript) -> str:
     """LLMJudge evaluators already grade against this full transcript (see
     app/runner.py); this surfaces the same evidence in the printed report so
     a verdict can be checked by eye instead of via Logfire."""
-    lines = [transcript.answer]
-    for call in transcript.tool_calls:
-        query = call.args.get("query", call.args)
-        # No square brackets here: Rich's Table treats "[...]" as markup and
-        # silently drops anything it doesn't recognize as a valid style.
-        lines.append(f"\n{call.tool_name} → {query!r}:\n{call.result}")
-    return "\n".join(lines)
+    sections = [f"Answer:\n{transcript.answer}"]
+    if transcript.tool_calls:
+        # No square brackets in labels: Rich's Table treats "[...]" as markup
+        # and silently drops anything it doesn't recognize as a valid style.
+        calls = "\n\n".join(
+            f"{call.tool_name} → {call.args.get('query', call.args)!r}:\n{call.result}"
+            for call in transcript.tool_calls
+        )
+        sections.append(f"Tool Calls:\n{calls}")
+    return "\n\n".join(sections)
 
 
 def _export_api_key_for_native_evaluators() -> None:

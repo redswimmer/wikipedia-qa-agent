@@ -2,10 +2,13 @@ from app.runner import RunTranscript, ToolCallRecord
 from evaluations.run import _format_transcript
 
 
-def test_format_transcript_includes_answer_only_when_no_tool_calls():
+def test_format_transcript_has_answer_header_and_no_tool_calls_header_when_no_tool_calls():
     transcript = RunTranscript(question="What is 2 + 2?", tool_calls=[], answer="4")
 
-    assert _format_transcript(transcript) == "4"
+    rendered = _format_transcript(transcript)
+
+    assert rendered == "Answer:\n4"
+    assert "Tool Calls:" not in rendered
 
 
 def test_format_transcript_includes_query_and_result_for_each_tool_call():
@@ -23,8 +26,9 @@ def test_format_transcript_includes_query_and_result_for_each_tool_call():
 
     rendered = _format_transcript(transcript)
 
+    assert rendered.startswith("Answer:\nAda Lovelace was a mathematician.")
+    assert "Tool Calls:" in rendered
     assert "search_wikipedia → 'Ada Lovelace'" in rendered
-    assert "Ada Lovelace was a mathematician." in rendered
     assert "[" not in rendered  # Rich Table treats "[...]" as markup and drops it
 
 
