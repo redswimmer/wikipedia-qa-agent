@@ -79,6 +79,7 @@ a terminal, not a stable interface; the eval suite works with
 ```python
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
 
@@ -151,8 +152,7 @@ def build_agent(model: Model | KnownModelName | None = None) -> Agent:
     )
 
     @agent.tool
-    def search_wikipedia(ctx: RunContext[httpx.Client], query: str) -> str:
-        ...
+    def search_wikipedia(ctx: RunContext[httpx.Client], query: str) -> str: ...
 
     return agent
 ```
@@ -180,18 +180,21 @@ class ToolCallRecord(BaseModel):
     args: dict
     result: str
 
+
 class RunTranscript(BaseModel):
     question: str
     tool_calls: list[ToolCallRecord]
     answer: str
 
+
 def run_agent(agent: Agent, question: str, deps: httpx.Client) -> RunTranscript:
     result = agent.run_sync(question, deps=deps)
     return _build_transcript(question, result)
 
+
 def _build_transcript(question: str, result: AgentRunResult) -> RunTranscript:
     ...  # walk result.new_messages(), pair ToolCallPart/ToolReturnPart by
-         # tool_call_id, take result.output as the answer
+    # tool_call_id, take result.output as the answer
 ```
 
 This is the audit trail, and it's built by reusing data pydantic_ai already
@@ -234,6 +237,7 @@ def format_transcript(transcript: RunTranscript) -> str:
     # Answer:
     # Paris is the capital of France.
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(...)
     parser.add_argument("question")
@@ -243,8 +247,7 @@ def main() -> None:
         agent = build_agent()
     except ValidationError:
         print(
-            "Error: ANTHROPIC_API_KEY is not set. Copy .env.example to .env "
-            "and add your key.",
+            "Error: ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -253,6 +256,7 @@ def main() -> None:
         transcript = run_agent(agent, args.question, deps=client)
 
     print(format_transcript(transcript))
+
 
 if __name__ == "__main__":
     main()
