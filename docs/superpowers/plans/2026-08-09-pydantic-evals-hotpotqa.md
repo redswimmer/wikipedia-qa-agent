@@ -116,7 +116,8 @@ the modules that already own the concepts they configure, and updates
 - Modify: `tests/unit/test_tools.py`
 
 **Interfaces:**
-- Produces: `app.agent.resolve_real_model(settings: Settings | None = None) -> Model | KnownModelName`
+- Produces: `app.agent.resolve_real_model(settings: Settings | None = None) -> Model` (narrower than
+  originally drafted here — see the ruling note after Step 3 below)
 - Produces: `app.tools.build_wikipedia_client(timeout: float = 30.0) -> httpx.Client`
 - Consumes (Task 4/5/6): both of the above, plus the existing
   `app.agent.agent` and `app.runner.run_agent`.
@@ -129,7 +130,9 @@ and `from app.config import Settings` to the imports at the top):
 
 ```python
 def test_resolve_real_model_uses_settings_model_name():
-    settings = Settings(anthropic_api_key="fake-key", anthropic_model="claude-opus-5", _env_file=None)
+    settings = Settings(
+        anthropic_api_key="fake-key", anthropic_model="claude-opus-5", _env_file=None
+    )
 
     model = resolve_real_model(settings)
 
@@ -150,7 +153,7 @@ Replace the full contents of `app/agent.py` with:
 
 import httpx
 from pydantic_ai import Agent
-from pydantic_ai.models import KnownModelName, Model
+from pydantic_ai.models import Model
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 
@@ -166,7 +169,7 @@ agent: Agent[httpx.Client, str] = Agent(
 )
 
 
-def resolve_real_model(settings: Settings | None = None) -> Model | KnownModelName:
+def resolve_real_model(settings: Settings | None = None) -> Model:
     """Resolve the real Anthropic model from Settings (.env)."""
     settings = settings or Settings()
     return AnthropicModel(
@@ -174,6 +177,20 @@ def resolve_real_model(settings: Settings | None = None) -> Model | KnownModelNa
         provider=AnthropicProvider(api_key=settings.anthropic_api_key.get_secret_value()),
     )
 ```
+
+**Ruling (recorded during execution, not the original draft):** this step
+originally specified `-> Model | KnownModelName`, copied from the old
+private `_resolve_real_model`'s signature without re-examining whether it
+still fit. It doesn't: `resolve_real_model` always constructs and returns a
+real `AnthropicModel` — never a bare `KnownModelName` string — and the
+wider union breaks `ty check` the moment calling code narrows the result
+(e.g. `model.model_name`, since `KnownModelName` is a large string-literal
+union with no such attribute). Confirmed by directly testing both
+annotations against this repo's real `ty check`. Ruled: use the narrower,
+honest `-> Model` shown above. `query_agent.py`'s `model_factory: Callable[[],
+Model | KnownModelName]` parameter (Step 9 below) keeps its wider type
+unchanged — a callable returning `Model` is a valid substitute for one
+typed to return `Model | KnownModelName`, so this stays compatible.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
