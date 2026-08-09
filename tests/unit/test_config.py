@@ -11,13 +11,20 @@ def test_settings_requires_api_key(monkeypatch):
         Settings(_env_file=None)
 
 
+def test_settings_rejects_empty_api_key(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)
+
+
 def test_settings_defaults_model_when_unset(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
 
     settings = Settings(_env_file=None)
 
-    assert settings.anthropic_api_key == "test-key"
+    assert settings.anthropic_api_key.get_secret_value() == "test-key"
     assert settings.anthropic_model == "claude-sonnet-5"
 
 

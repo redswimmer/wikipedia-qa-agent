@@ -1,7 +1,13 @@
 import httpx
 import pytest
 from pydantic_ai import UnexpectedModelBehavior
-from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelResponse,
+    RetryPromptPart,
+    TextPart,
+    ToolCallPart,
+)
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from app.agent import build_agent
@@ -62,3 +68,61 @@ def test_run_agent_propagates_exhausted_retries():
         httpx.Client(transport=httpx.MockTransport(_fake_no_results_transport)) as client,
     ):
         run_agent(agent, "Who is nobody?", deps=client)
+
+
+def _always_search(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    return ModelResponse(parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": "x"})])
+
+
+def _rate_limited_transport(request: httpx.Request) -> httpx.Response:
+    return httpx.Response(429, json={})
+
+
+def test_run_agent_treats_429_as_retry_not_crash():
+    agent = build_agent(FunctionModel(_always_search))
+
+    with (
+        pytest.raises(UnexpectedModelBehavior),
+        httpx.Client(transport=httpx.MockTransport(_rate_limited_transport)) as client,
+    ):
+        run_agent(agent, "who knows", deps=client)
+
+
+def _search_fails_then_succeeds(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    last_part = messages[-1].parts[-1]
+    if isinstance(last_part, RetryPromptPart):
+        return ModelResponse(
+            parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": "Ada Lovelace"})]
+        )
+    if len(messages) == 1:
+        return ModelResponse(
+            parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": "nonexistent"})]
+        )
+    return ModelResponse(parts=[TextPart(content="Ada Lovelace was a mathematician.")])
+
+
+def _fake_transport_fails_once_then_succeeds(request: httpx.Request) -> httpx.Response:
+    if "srsearch=nonexistent" in str(request.url):
+        return httpx.Response(200, json={"query": {"search": []}})
+    if "list=search" in str(request.url):
+        return httpx.Response(200, json={"query": {"search": [{"title": "Ada Lovelace"}]}})
+    return httpx.Response(
+        200, json={"query": {"pages": {"1": {"extract": "Ada Lovelace was a mathematician."}}}}
+    )
+
+
+def test_run_agent_records_failed_retry_before_successful_call():
+    agent = build_agent(FunctionModel(_search_fails_then_succeeds))
+
+    with httpx.Client(
+        transport=httpx.MockTransport(_fake_transport_fails_once_then_succeeds)
+    ) as client:
+        transcript = run_agent(agent, "Who was Ada Lovelace?", deps=client)
+
+    assert len(transcript.tool_calls) == 2
+    assert transcript.tool_calls[0].tool_name == "search_wikipedia"
+    assert transcript.tool_calls[0].args == {"query": "nonexistent"}
+    assert transcript.tool_calls[0].result.startswith("[retry]")
+    assert transcript.tool_calls[1].tool_name == "search_wikipedia"
+    assert transcript.tool_calls[1].args == {"query": "Ada Lovelace"}
+    assert transcript.tool_calls[1].result == "Ada Lovelace was a mathematician."

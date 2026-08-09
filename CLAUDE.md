@@ -168,7 +168,7 @@ to a logging contract and can drift from what the model actually saw).
   `Settings` when no model is given. No CLI/argparse/printing logic.
 - `app/runner.py` — `run_agent(agent, question, deps)`: runs a question
   through the agent and returns an auditable `RunTranscript` built from
-  Pydantic AI's own message history (see Auditability below). Shared by the
+  Pydantic AI's own message history (see Auditability above). Shared by the
   CLI and (later) the eval suite — neither depends on the other.
 - `app/query_agent.py` — the CLI entrypoint (`python -m app.query_agent`).
   The only module with argparse/printing/CLI-specific error handling;

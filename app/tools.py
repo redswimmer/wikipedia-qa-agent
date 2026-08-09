@@ -25,7 +25,7 @@ def parse_search_title(response_json: dict) -> str | None:
     results = response_json.get("query", {}).get("search", [])
     if not results:
         return None
-    return results[0]["title"]
+    return results[0].get("title")
 
 
 def parse_extract(response_json: dict) -> str | None:
@@ -38,6 +38,14 @@ def parse_extract(response_json: dict) -> str | None:
     return None
 
 
+def _raise_for_transient_status(response: httpx.Response) -> None:
+    """Convert transient HTTP failures (429/5xx) into a ModelRetry instead of
+    letting them crash the run; anything else still raises normally."""
+    if response.status_code == 429 or response.status_code >= 500:
+        raise ModelRetry(f"Wikipedia returned {response.status_code}; try again in a moment.")
+    response.raise_for_status()
+
+
 def search_wikipedia(ctx: RunContext[httpx.Client], query: str) -> str:
     """Search Wikipedia and return a plain-text extract of the best-matching article."""
     client = ctx.deps
@@ -46,7 +54,7 @@ def search_wikipedia(ctx: RunContext[httpx.Client], query: str) -> str:
         MEDIAWIKI_API_URL,
         params={"action": "query", "list": "search", "srsearch": query, "format": "json"},
     )
-    search_response.raise_for_status()
+    _raise_for_transient_status(search_response)
     title = parse_search_title(search_response.json())
     if title is None:
         raise ModelRetry(f"No Wikipedia article found for query: {query!r}. Try a different query.")
@@ -57,11 +65,12 @@ def search_wikipedia(ctx: RunContext[httpx.Client], query: str) -> str:
             "action": "query",
             "prop": "extracts",
             "explaintext": True,
+            "exintro": True,
             "titles": title,
             "format": "json",
         },
     )
-    extract_response.raise_for_status()
+    _raise_for_transient_status(extract_response)
     extract = parse_extract(extract_response.json())
     if extract is None:
         raise ModelRetry(

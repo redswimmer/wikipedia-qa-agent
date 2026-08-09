@@ -25,7 +25,7 @@ def build_agent(model: Model | KnownModelName | None = None) -> Agent[httpx.Clie
         settings = Settings()
         model = AnthropicModel(
             settings.anthropic_model,
-            provider=AnthropicProvider(api_key=settings.anthropic_api_key),
+            provider=AnthropicProvider(api_key=settings.anthropic_api_key.get_secret_value()),
         )
 
     return Agent(

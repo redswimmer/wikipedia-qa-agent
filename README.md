@@ -23,19 +23,15 @@ cp .env.example .env
 Ask a question:
 
 ```bash
-uv run python -m app.agent "When was the Eiffel Tower built?"
+uv run python -m app.query_agent "When was the Eiffel Tower built?"
 ```
 
-Run the built-in demo (a handful of sample questions, no typing required):
-
-```bash
-uv run python -m app.agent --demo
-```
-
-Each answer is printed along with whether the Wikipedia search tool was used to
-produce it.
+The output shows the question, every Wikipedia search the agent performed
+(with its query and the result), and the final answer — so you can see
+exactly what the agent looked up before answering, not just the answer
+itself.
 
 ## Evals
 
-The eval suite that measures answer quality lives in [`tests/`](tests/). See
-[`docs/`](docs/) for the design rationale behind the prompt and eval approach.
+The eval suite that measures answer quality (assignment deliverable #3) is
+not yet built.

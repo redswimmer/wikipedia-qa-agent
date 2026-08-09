@@ -13,6 +13,12 @@ def test_parse_search_title_returns_none_when_no_results():
     assert parse_search_title(response_json) is None
 
 
+def test_parse_search_title_returns_none_when_title_key_missing():
+    response_json = {"query": {"search": [{"snippet": "no title field here"}]}}
+
+    assert parse_search_title(response_json) is None
+
+
 def test_parse_extract_returns_first_nonempty_extract():
     response_json = {
         "query": {"pages": {"12345": {"extract": "Ada Lovelace was a mathematician."}}}

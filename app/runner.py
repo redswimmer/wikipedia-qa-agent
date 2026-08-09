@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel
 from pydantic_ai import Agent, AgentRunResult
-from pydantic_ai.messages import ToolCallPart, ToolReturnPart
+from pydantic_ai.messages import RetryPromptPart, ToolCallPart, ToolReturnPart
 
 
 class ToolCallRecord(BaseModel):
@@ -32,7 +32,7 @@ def run_agent(agent: Agent[httpx.Client, str], question: str, deps: httpx.Client
     return _build_transcript(question, result)
 
 
-def _build_transcript(question: str, result: AgentRunResult) -> RunTranscript:
+def _build_transcript(question: str, result: AgentRunResult[str]) -> RunTranscript:
     calls_by_id: dict[str, ToolCallPart] = {}
     tool_calls: list[ToolCallRecord] = []
 
@@ -48,6 +48,16 @@ def _build_transcript(question: str, result: AgentRunResult) -> RunTranscript:
                             tool_name=call.tool_name,
                             args=call.args_as_dict(),
                             result=str(part.content),
+                        )
+                    )
+            elif isinstance(part, RetryPromptPart):
+                call = calls_by_id.get(part.tool_call_id)
+                if call is not None:
+                    tool_calls.append(
+                        ToolCallRecord(
+                            tool_name=call.tool_name,
+                            args=call.args_as_dict(),
+                            result=f"[retry] {part.content}",
                         )
                     )
 

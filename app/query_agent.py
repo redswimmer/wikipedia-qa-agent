@@ -51,7 +51,7 @@ def main(
         )
         sys.exit(1)
 
-    with httpx.Client(headers={"User-Agent": WIKIPEDIA_USER_AGENT}) as client:
+    with httpx.Client(headers={"User-Agent": WIKIPEDIA_USER_AGENT}, timeout=30.0) as client:
         transcript = run_agent(agent, args.question, deps=client)
 
     print(format_transcript(transcript))
