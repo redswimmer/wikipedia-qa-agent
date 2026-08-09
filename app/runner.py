@@ -29,15 +29,8 @@ def run_agent(
     deps: httpx.Client,
     model: Model | KnownModelName,
 ) -> RunTranscript:
-    """Run `question` through `agent`, using `model` to answer, and return an
-    auditable transcript.
-
-    `model` is required, not defaulted — pass the real resolved model in
-    production, or a fake (`TestModel()`, `FunctionModel(...)`) in tests.
-
-    Raises whatever the underlying agent run raises (e.g. `UnexpectedModelBehavior`
-    when tool retries are exhausted) — callers decide how to handle failure.
-    """
+    """Raises whatever the underlying agent run raises (e.g. `UnexpectedModelBehavior`
+    when tool retries are exhausted) — callers decide how to handle failure."""
     result = agent.run_sync(question, deps=deps, model=model)
     return _build_transcript(question, result)
 
