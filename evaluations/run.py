@@ -1,18 +1,46 @@
 """Generic runner: load a dataset by name, run it against the production agent, print the report."""
 
 import argparse
+import contextlib
+import os
 import sys
 from pathlib import Path
+from typing import Any
 
+import logfire
 from pydantic import ValidationError
 from pydantic_evals import Dataset
 
+from app.config import Settings
 from app.runner import RunTranscript
 from evaluations.evaluators import CUSTOM_EVALUATOR_TYPES
-from evaluations.models import HotpotQAMetadata
 from evaluations.task import production_task
 
+# Local-only unless LOGFIRE_TOKEN is set — required for span-based evaluators
+# (e.g. MaxToolCalls) to capture anything; harmless no-op otherwise. Never
+# called by the CLI, so plain `query_agent.py` usage is unaffected.
+logfire.configure(
+    send_to_logfire="if-token-present", environment="development", service_name="evals"
+)
+logfire.instrument_pydantic_ai()
+
 DATASETS_DIR = Path(__file__).parent / "datasets"
+
+
+def _export_api_key_for_native_evaluators() -> None:
+    """LLMJudge's `model` field always round-trips through YAML as a plain model
+    string (pydantic_evals converts any Model instance to its model_id string on
+    serialization — there's no way to bake an explicit provider/API key into a
+    committed dataset file). At evaluate-time it's resolved via pydantic_ai's
+    default provider construction, which reads ANTHROPIC_API_KEY from the process
+    environment directly — not through this project's Settings/.env mechanism
+    (which app.bootstrap.resolve_real_model uses explicitly for the agent under
+    test). Exporting it here, once, is what lets any LLMJudge-based evaluator in
+    a dataset file work at all."""
+    with contextlib.suppress(
+        ValidationError
+    ):  # let the real error surface later, from resolve_real_model()
+        os.environ.setdefault("ANTHROPIC_API_KEY", Settings().anthropic_api_key.get_secret_value())
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -30,7 +58,12 @@ def main(argv: list[str] | None = None) -> None:
         )
         sys.exit(1)
 
-    dataset = Dataset[str, RunTranscript, HotpotQAMetadata].from_file(
+    _export_api_key_for_native_evaluators()
+
+    # Metadata type intentionally loose here: each dataset defines its own metadata
+    # model (see evaluations/models.py) and nothing in this generic runner reads
+    # metadata fields, so it doesn't need to know which shape a given dataset uses.
+    dataset = Dataset[str, RunTranscript, Any].from_file(
         dataset_path, custom_evaluator_types=CUSTOM_EVALUATOR_TYPES
     )
     try:

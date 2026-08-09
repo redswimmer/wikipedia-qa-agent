@@ -1,4 +1,4 @@
-"""Shared, cross-cutting metadata for HotpotQA-sourced eval cases."""
+"""Typed metadata for eval cases, grouped by dataset provenance."""
 
 from typing import Literal
 
@@ -12,3 +12,11 @@ class HotpotQAMetadata(BaseModel):
     level: Literal["easy", "medium", "hard"]
     type: Literal["comparison", "bridge"]
     hotpotqa_id: str
+
+
+class RefusalMetadata(BaseModel):
+    """Provenance for a hand-authored refusal-eval case: why it should be
+    refused, and how the request is phrased."""
+
+    category: Literal["unsafe", "gibberish", "unanswerable"]
+    phrasing: Literal["imperative", "colloquial", "implicit", "question"]

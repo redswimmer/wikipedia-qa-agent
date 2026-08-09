@@ -185,25 +185,47 @@ to a logging contract and can drift from what the model actually saw).
   The only module with argparse/printing/CLI-specific error handling;
   depends on `agent.py` and `runner.py`, and nothing else depends on it.
 - `evaluations/` — the eval suite (assignment deliverable #3).
-  `models.py` (`HotpotQAMetadata`: cross-cutting HotpotQA provenance —
-  `level`/`type`/`hotpotqa_id`; purpose-specific grading data, e.g. a future
-  correctness dataset's expected answer, lives next to the evaluator that
-  reads it, not here — keeps this file's reason to change singular).
-  `evaluators.py` (`Evaluator` subclasses + `CUSTOM_EVALUATOR_TYPES`; grows
-  by addition as new eval purposes are added — split into multiple files
-  only if it gets large enough to violate "one clear responsibility", not
-  preemptively). `task.py` (`production_task()`: the one production
+  `models.py` (per-dataset metadata models — `HotpotQAMetadata`:
+  `level`/`type`/`hotpotqa_id`; `RefusalMetadata`: `category`/`phrasing`;
+  purpose-specific grading data, e.g. a future correctness dataset's
+  expected answer, lives next to the evaluator that reads it, not here —
+  keeps this file's reason to change singular). `evaluators.py`
+  (`Evaluator` subclasses + `CUSTOM_EVALUATOR_TYPES`; grows by addition as
+  new eval purposes are added — split into multiple files only if it gets
+  large enough to violate "one clear responsibility", not preemptively;
+  prefer a native `pydantic_evals` evaluator over a custom one whenever one
+  exists — see the `refusal` dataset below, which needs zero custom
+  evaluator classes). `task.py` (`production_task()`: the one production
   entrypoint every dataset's cases run through — wraps
   `app.bootstrap.resolve_real_model()` + `app.tools.build_wikipedia_client()` +
   `app.runner.run_agent()`; reused unchanged across every dataset). `run.py`
   (generic: `uv run python -m evaluations.run <dataset_name>` — never
   touched when adding a new dataset, since the dataset name is just an
-  argument). `datasets/*.yaml` — one file per eval purpose; cases *and*
-  their evaluator(s) are serialized together via
+  argument; loads datasets as `Dataset[str, RunTranscript, Any]` —
+  deliberately loose on the metadata type, since each dataset defines its
+  own metadata model and the runner never reads metadata fields itself).
+  `datasets/*.yaml` — one file per eval purpose; cases *and* their
+  evaluator(s) are serialized together via
   `Dataset.to_file(custom_evaluator_types=...)`, so the YAML is
   self-describing, with an auto-generated `*_schema.json` sibling for IDE
   autocomplete. Depends only on `app/*`, never `app/query_agent.py` — same
   rule as `query_agent.py` itself.
+- OpenTelemetry/Logfire: `app/agent.py` sets `agent.instrument = True` on
+  the shared `agent` object (harmless without a configured tracer — spans
+  go to a no-op provider; only `evaluations/run.py` actually configures one,
+  locally-only via `logfire.configure(send_to_logfire="if-token-present",
+  ...)`, so plain `query_agent.py` CLI usage is unaffected). This exists so
+  span-based native evaluators (e.g. `MaxToolCalls`) work — deliberately
+  *not* used for the `format_validation` dataset's structural checks, which
+  read `RunTranscript` directly instead (no OTel needed there), but *is*
+  the right tool for asserting tool-call counts/identity, matching
+  `pydantic_evals`' own documented pattern for that kind of check. Note:
+  `LLMJudge`'s `model` field always round-trips through a committed YAML as
+  a plain model string (pydantic_evals serializes any `Model` instance back
+  to its `model_id`), so it resolves via `ANTHROPIC_API_KEY` in the process
+  environment at evaluate-time, not through this project's `Settings`/`.env`
+  mechanism — `evaluations/run.py` exports it from `Settings` once, before
+  evaluating, specifically so `LLMJudge`-based evaluators work.
 - Evals hit the real Anthropic API and live Wikipedia — they are run
   manually (`uv run python -m evaluations.run <dataset_name>`), never by
   pytest/pre-commit/CI. Code quality on `evaluations/*.py` is *not*
@@ -216,12 +238,21 @@ to a logging contract and can drift from what the model actually saw).
   `datasets` (Hugging Face) is a dev-only dependency for that curation work;
   nothing in the committed code imports it. HotpotQA (Yang et al. 2018,
   arXiv:1809.09600, CC-BY-SA-4.0) is extracted to
-  `docs/hotpotqa_1809.09600v1.md` for reference.
+  `docs/hotpotqa_1809.09600v1.md` for reference. The `refusal` dataset is
+  hand-authored (not HotpotQA-sourced) — no external dataset, same
+  no-build-script rule applies.
 - `tests/unit/test_app_imports.py` is a smoke test only (import-time check
-  on the six `app` modules) — it does not cover `evaluations/`; the eval
-  suite itself (assignment deliverable #3) lives under `evaluations/` (see
-  above) and currently has one dataset (`format_validation`), with
-  correctness/faithfulness/relevancy datasets still to come.
+  on the six `app` modules plus `evaluations/*`) — it doesn't verify
+  dataset *content*; `tests/unit/test_datasets.py` loads each committed
+  dataset YAML for real (via `Dataset.from_file`) and asserts on its case
+  count/metadata, so a renamed evaluator or YAML typo fails fast in pytest
+  instead of only surfacing on a live run. Eval suite currently has two
+  datasets: `format_validation` (structural smoke check) and `refusal` (30
+  hand-authored questions the agent should decline — unsafe/gibberish/
+  unanswerable — checked via native `MaxToolCalls(max_calls=0)` plus two
+  `LLMJudge` evaluators for refusal quality and safety, judged by a
+  different model than the agent under test to reduce self-grading bias).
+  Correctness/faithfulness datasets still to come.
 - `pyproject.toml` sets `pythonpath = ["."]` under `[tool.pytest.ini_options]`.
   This is required: `app/` has no `__init__.py`/package install, so without it
   pytest's default import mode can't resolve `app.*` imports even though a

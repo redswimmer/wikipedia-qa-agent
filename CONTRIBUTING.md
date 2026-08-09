@@ -64,3 +64,19 @@ uv run pre-commit run --all-files
   header comment for the exact methodology used last time — no build script
   is kept in the repo, only the resulting YAML (see the design doc under
   `docs/superpowers/specs/` for why).
+- Hand-authored datasets (no external source, e.g. `refusal`) follow the
+  same no-build-script rule — build `Case`/`Dataset` objects directly with
+  the literal question text and run `Dataset.to_file(...)` once. See
+  `evaluations/datasets/refusal.yaml`'s header comment for that dataset's
+  methodology (category/phrasing dimensions).
+- When adding an `LLMJudge`-based evaluator: always pass `model=` explicitly
+  (it defaults to `'openai:gpt-5.2'`, and this project has no OpenAI key).
+  Also note `LLMJudge`'s `model` field always round-trips through a
+  committed YAML as a plain model string — `pydantic_evals` serializes any
+  `Model` instance back to its `model_id` on save — so at evaluate-time it
+  always resolves via `ANTHROPIC_API_KEY` in the process environment, not
+  through this project's `Settings`/`.env` mechanism. `evaluations/run.py`
+  already exports the key from `Settings` before evaluating, so this works
+  automatically for any dataset — but it's why `LLMJudge` can't carry an
+  explicit provider/key the way `app.bootstrap.resolve_real_model()` does
+  for the agent under test.

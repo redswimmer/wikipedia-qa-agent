@@ -12,3 +12,8 @@ agent: Agent[httpx.Client, str] = Agent(
     deps_type=httpx.Client,
     tools=[search_wikipedia],
 )
+# Emits OpenTelemetry spans for agent runs and tool calls. Harmless without
+# instrumentation configured (spans go to a no-op tracer) — the eval suite
+# is what actually configures logfire and reads them, via span-based
+# evaluators like MaxToolCalls (see evaluations/run.py).
+agent.instrument = True
