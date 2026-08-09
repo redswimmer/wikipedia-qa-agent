@@ -1,6 +1,6 @@
 # Wikipedia Q&A Agent
 
-[![CI](https://github.com/redswimmer/anthropic-take-home-assignment/actions/workflows/ci.yml/badge.svg)](https://github.com/redswimmer/anthropic-take-home-assignment/actions/workflows/ci.yml)
+[![CI](https://github.com/redswimmer/wikipedia-qa-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/redswimmer/wikipedia-qa-agent/actions/workflows/ci.yml)
 
 A question-answering agent powered by Claude with a `search_wikipedia` tool. Ask
 it a question; it decides whether Wikipedia search is needed, looks things up if
