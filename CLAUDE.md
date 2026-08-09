@@ -41,7 +41,9 @@ lockfile, not an isolated venv.
 
 Guiding constraints for how code in this repo should be shaped — apply
 judgment about what they mean concretely once the actual design takes shape;
-don't treat any specific class/module name below as prescribed.
+don't treat any specific class/module name below as prescribed. See
+[`docs/architecture-notes.md`](docs/architecture-notes.md) for a fuller,
+offline summary of the cosmicpython chapters referenced below.
 
 - **Clean Code / SOLID.** Small, single-responsibility units. Depend on
   abstractions at seams that need to be swapped or faked in tests, not on
