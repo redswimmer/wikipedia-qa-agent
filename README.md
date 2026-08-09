@@ -43,7 +43,7 @@ exactly what the agent looked up before answering, not just the answer itself.
 
 ## Evals
 
-The eval suite (assignment deliverable #3) grades the agent along two
+The eval suite (assignment deliverable #3) grades the agent along three
 dimensions so far:
 
 ```bash
@@ -58,9 +58,11 @@ uv run python -m evaluations.run hotpotqa_hard
 - **Refusal** — does the agent correctly decline questions Wikipedia search
   can't help with (unsafe requests, gibberish, or things unanswerable in
   principle), instead of guessing or searching for nonsense?
+- **hotpotqa_hard** — is the answer actually *good*? Grades correctness,
+  faithfulness, relevance, and safety via four `LLMJudge` evaluators over 50
+  hard HotpotQA questions, plus a tool-call budget of 1-2 search calls.
 
-Correctness and faithfulness grading come next. See
-`docs/design_rationale.md` for what each eval measures and why, and what
+See `docs/design_rationale.md` for what each eval measures and why, and what
 we've learned so far.
 
 No new setup beyond the Quickstart above: running an already-built dataset

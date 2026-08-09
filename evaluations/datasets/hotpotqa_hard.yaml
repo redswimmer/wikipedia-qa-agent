@@ -984,7 +984,15 @@ evaluators:
       include_reason: true
       evaluation_name: relevance
 - LLMJudge:
-    rubric: 'Task: evaluate whether the response''s final answer is semantically
+    rubric: 'Note: ExpectedOutput is a JSON object wrapping the gold answer (e.g.
+      {"question": ..., "tool_calls": [], "answer": ...}) -- only its `answer` field
+      is the expected answer; its `tool_calls: []` is a serialization placeholder
+      from an unrelated type constraint, not an expectation about how many searches
+      should have happened.
+
+
+
+      Task: evaluate whether the response''s final answer is semantically
 
       equivalent to the expected (gold) answer, even if worded, formatted,
 

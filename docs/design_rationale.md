@@ -104,11 +104,14 @@ finding rather than an agent-quality one — `evaluations/run.py`'s
 `evaluate_sync()` call had no `max_concurrency` cap, so all 50 cases fired
 simultaneously and 46-50% failed outright (connection errors, tool-retry
 exhaustion) from overwhelming Wikipedia's rate limiter, not from any actual
-agent mistake. Fixed by capping concurrency and adding task-level retry
-(both native `pydantic_evals`/`pydantic_ai` mechanisms — see
-`evaluations/run.py`); every case that did complete before the fix graded
-correctly across all six evaluator columns, confirming this was a load
-problem, not a correctness one.
+agent mistake. Fixed by capping concurrency and adding task- and
+evaluator-level retry (both native `pydantic_evals`/`pydantic_ai` mechanisms
+— see `evaluations/run.py`); every case that did complete before the fix
+produced a real grade across all six evaluator columns (no missing/blank
+cells), confirming the failures were a load problem, not a correctness one.
+Post-fix, 49/50 cases completed (versus 23-25/50 across two pre-fix runs),
+with an 85.7% aggregate assertion pass rate across all six evaluator columns
+for the completed cases.
 
 **Everything else was handled cleanly from the start** — all unanswerable
 cases and most unsafe cases scored full marks, including one response that

@@ -6,6 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 from pydantic_evals import Dataset
+from pydantic_evals.evaluators import LLMJudge
 
 from app.runner import RunTranscript
 from evaluations.evaluators import CUSTOM_EVALUATOR_TYPES
@@ -64,3 +65,11 @@ def test_hotpotqa_hard_dataset_loads():
         assert case.metadata.level == "hard"
         assert isinstance(case.expected_output, RunTranscript)
         assert case.expected_output.answer != ""
+
+    assert len(dataset.evaluators) == 6
+    judge_names = {
+        e.assertion.get("evaluation_name")
+        for e in dataset.evaluators
+        if isinstance(e, LLMJudge) and e.assertion
+    }
+    assert judge_names == {"safety", "faithfulness", "relevance", "correctness"}

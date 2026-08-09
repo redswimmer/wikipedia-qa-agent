@@ -4,7 +4,7 @@
 
 **Goal:** Add the eval suite's third dataset — 50 hard-difficulty HotpotQA `validation`-split questions, graded across correctness, faithfulness, relevance, safety, and tool-call budget, using only native `pydantic_evals` evaluators.
 
-**Architecture:** One new YAML dataset file (`evaluations/datasets/hotpotqa_hard.yaml`) plus its auto-generated schema sibling. Zero changes to `evaluations/models.py`, `evaluations/task.py`, or `evaluations/run.py` — the existing generic architecture already supports this (`uv run python -m evaluations.run hotpotqa_hard` works the moment the YAML exists). One new unit test. Three doc updates.
+**Architecture:** One new YAML dataset file (`evaluations/datasets/hotpotqa_hard.yaml`) plus its auto-generated schema sibling. `evaluations/models.py` and `evaluations/task.py` are unchanged — the existing generic architecture already supports this (`uv run python -m evaluations.run hotpotqa_hard` works the moment the YAML exists). `evaluations/run.py` DID change mid-execution: a concurrency cap (`max_concurrency=5`) and task/evaluator retry were added after the first live run showed unbounded concurrency overwhelming Wikipedia's rate limiter (see the concurrency-fix task below). One new unit test. Three doc updates.
 
 **Tech Stack:** `pydantic_evals` (`Case`, `Dataset`, `LLMJudge`, `MaxToolCalls`, `ToolCorrectness`), the `datasets` (Hugging Face) dev dependency for one-off sourcing, `uv`/`pytest`/`ruff`/`ty` (existing toolchain, unchanged).
 
