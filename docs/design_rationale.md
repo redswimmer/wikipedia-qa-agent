@@ -34,6 +34,18 @@ category the eval happened to catch — a prompt tuned to name our own test
 categories would overfit to this eval rather than generalize to real,
 unseen input shaped differently.
 
+A second gap, found through manual live testing rather than an eval (see
+Section 4's second iteration): "always use `search_wikipedia`... rather
+than relying on your own knowledge alone" reads as unconditional, but the
+model still skipped the tool on trivia it was confident about (e.g. "What
+is the capital of France?"). The instruction's own framing — "decide
+whether the request is *genuinely* a factual... question" — left room for
+the model to read confidence as evidence a question didn't really need
+looking up, and the closing guideline ("answer... as if you already knew
+the information") reinforced that reading. Fixed by naming the loophole
+directly: search even when confident, because confidence isn't a reason to
+skip it.
+
 ## 2. Eval suite design: dimensions measured, and why
 
 Three datasets so far — the first two deliberately narrow (one dimension
@@ -147,6 +159,43 @@ normally — 30/30 cases finished this time, versus 29/30 before.
 Still open: whether a search retry budget being exhausted should be a hard
 crash at all, versus a graceful decline; and how to handle prompts
 sensitive enough to trip the judge's own content filtering, if it recurs.
+
+A second iteration, found through manual live testing while building CLI
+streaming (not from a scored eval — no correctness dataset exists yet to
+have caught it automatically):
+
+**Before:** ran the unmodified `run_agent()` against three easy trivia
+questions ("What is the capital of France?", "Who wrote Romeo and
+Juliet?", "What year did World War II end?") and got zero tool calls on
+all three — the model answered from its own knowledge despite the system
+prompt's "always use `search_wikipedia`" instruction. Multi-hop
+`format_validation` questions (e.g. comparing two magazines' founding
+dates) reliably triggered the tool; only single-hop trivia the model was
+confident about did not — consistent with the model reading "genuinely
+factual" as "non-trivial enough to need lookup" rather than "any real-world
+fact, always."
+
+**Change:** added an explicit override right at the loophole — "always
+call `search_wikipedia` first — even if you're confident you already know
+the answer... confidence is not a reason to skip the search" — and
+reworded the closing guideline from "answer... as if you already knew the
+information" (which could be read as license to skip the tool) to "once
+you've searched, answer directly and concisely, in your own words" (same
+tone guidance, but only after the tool call, not instead of it).
+
+**After:** re-ran the same three trivia questions through unmodified
+`run_agent()` — all three now produce exactly one tool call. Full eval
+suite (`format_validation`, `refusal`) not yet re-run against this change;
+worth doing before trusting it broadly, since the reworded closing
+guideline touches phrasing that could interact with refusal quality.
+
+This gap only surfaced from manually trying questions outside the eval
+suite's existing cases — the format_validation dataset's cases are all
+multi-hop HotpotQA questions, which happened not to exercise this failure
+mode, and no dataset yet targets answer correctness/tool-use-necessity
+directly. Argues for the correctness dataset in Section 5 including
+deliberately easy, single-hop trivia cases, not just harder multi-hop
+ones.
 
 ## 5. How I'd extend this with more time
 
