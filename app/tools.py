@@ -14,6 +14,12 @@ WIKIPEDIA_USER_AGENT = (
 )
 
 
+def build_wikipedia_client(timeout: float = 30.0) -> httpx.Client:
+    """A correctly-configured but unopened client for calling search_wikipedia.
+    Lifecycle (open/close) stays with the caller."""
+    return httpx.Client(headers={"User-Agent": WIKIPEDIA_USER_AGENT}, timeout=timeout)
+
+
 def parse_search_title(response_json: dict) -> str | None:
     """Pure: pull the best-matching page title out of a MediaWiki search response."""
     results = response_json.get("query", {}).get("search", [])

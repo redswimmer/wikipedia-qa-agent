@@ -41,5 +41,24 @@ exactly what the agent looked up before answering, not just the answer itself.
 
 ## Evals
 
-The eval suite that measures answer quality (assignment deliverable #3) is
-not yet built.
+The eval suite (assignment deliverable #3) grades the agent along two
+dimensions so far:
+
+```bash
+uv run python -m evaluations.run format_validation
+uv run python -m evaluations.run refusal
+```
+
+- **Format validation** — does the agent produce a real answer with a real
+  audit trail? The baseline sanity check, before grading answer quality at
+  all.
+- **Refusal** — does the agent correctly decline questions Wikipedia search
+  can't help with (unsafe requests, gibberish, or things unanswerable in
+  principle), instead of guessing or searching for nonsense?
+
+Correctness and faithfulness grading come next. See
+`docs/design_rationale.md` for what each eval measures and why, and what
+we've learned so far.
+
+No new setup beyond the Quickstart above: running an already-built dataset
+needs the same API key and network access as the CLI, nothing more.

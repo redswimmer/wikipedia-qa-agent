@@ -48,8 +48,35 @@ uv run pre-commit run --all-files
 
 ## Notes
 
-- This project is a member of a `uv` workspace rooted two directories up.
-  `uv run`/`uv sync` from this directory resolve against that shared
-  workspace environment and lockfile — you don't need a separate virtualenv
-  here.
+- This is a standalone `uv` project — `uv sync` creates its own `.venv` here
+  and resolves against this repo's own `uv.lock`. Don't nest it inside a
+  parent `uv` workspace: this repo is submitted/cloned standalone (and CI
+  checks out only this repo), so a shared workspace lockfile above it can
+  silently drift from what's actually committed here — `uv add` would
+  update the *workspace's* lockfile instead of this repo's, leaving
+  `uv sync --locked` broken for anyone who clones just this repo.
 - Requires Python >= 3.13 (see `pyproject.toml`).
+- To add more HotpotQA-sourced cases to an eval dataset: use the
+  `datasets` dev dependency interactively (e.g. `datasets.load_dataset("hotpotqa/hotpot_qa",
+  "distractor", split="train", streaming=True)`), build `Case`/`Dataset`
+  objects per `evaluations/models.py`/`evaluations/evaluators.py`, and call
+  `Dataset.to_file(...)`. See `evaluations/datasets/format_validation.yaml`'s
+  header comment for the exact methodology used last time — no build script
+  is kept in the repo, only the resulting YAML (see the design doc under
+  `docs/superpowers/specs/` for why).
+- Hand-authored datasets (no external source, e.g. `refusal`) follow the
+  same no-build-script rule — build `Case`/`Dataset` objects directly with
+  the literal question text and run `Dataset.to_file(...)` once. See
+  `evaluations/datasets/refusal.yaml`'s header comment for that dataset's
+  methodology (category/phrasing dimensions).
+- When adding an `LLMJudge`-based evaluator: always pass `model=` explicitly
+  (it defaults to `'openai:gpt-5.2'`, and this project has no OpenAI key).
+  Also note `LLMJudge`'s `model` field always round-trips through a
+  committed YAML as a plain model string — `pydantic_evals` serializes any
+  `Model` instance back to its `model_id` on save — so at evaluate-time it
+  always resolves via `ANTHROPIC_API_KEY` in the process environment, not
+  through this project's `Settings`/`.env` mechanism. `evaluations/run.py`
+  already exports the key from `Settings` before evaluating, so this works
+  automatically for any dataset — but it's why `LLMJudge` can't carry an
+  explicit provider/key the way `app.bootstrap.resolve_real_model()` does
+  for the agent under test.

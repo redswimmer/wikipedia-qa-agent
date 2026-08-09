@@ -1,4 +1,9 @@
-from app.tools import parse_extract, parse_search_title
+from app.tools import (
+    WIKIPEDIA_USER_AGENT,
+    build_wikipedia_client,
+    parse_extract,
+    parse_search_title,
+)
 
 
 def test_parse_search_title_returns_first_result_title():
@@ -31,3 +36,19 @@ def test_parse_extract_returns_none_when_extract_is_blank():
     response_json = {"query": {"pages": {"-1": {"extract": ""}}}}
 
     assert parse_extract(response_json) is None
+
+
+def test_build_wikipedia_client_sets_user_agent_header():
+    client = build_wikipedia_client()
+    try:
+        assert client.headers["User-Agent"] == WIKIPEDIA_USER_AGENT
+    finally:
+        client.close()
+
+
+def test_build_wikipedia_client_defaults_to_30_second_timeout():
+    client = build_wikipedia_client()
+    try:
+        assert client.timeout.read == 30.0
+    finally:
+        client.close()
