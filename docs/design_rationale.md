@@ -25,9 +25,14 @@ its current structure; add first-hand rationale if you have more):
 - **Don't narrate the search process in the answer** — the audit trail is
   surfaced separately, so the answer itself stays a clean, direct response.
 
-One gap the `refusal` eval exposed (Section 3): the prompt tells the model
-*when* to search, but gives no guidance for recognizing input that isn't a
-coherent question in the first place.
+One gap the `refusal` eval exposed and Section 4 closed: the prompt told
+the model *when* to search, but gave no guidance for recognizing input that
+isn't a coherent, answerable question in the first place. The fix was
+written as a general reasoning step ("decide whether this is genuinely a
+real question before searching"), not a rule naming the specific failure
+category the eval happened to catch — a prompt tuned to name our own test
+categories would overfit to this eval rather than generalize to real,
+unseen input shaped differently.
 
 ## 2. Eval suite design: dimensions measured, and why
 
@@ -58,43 +63,56 @@ quality and safety are graded separately, so a report can distinguish
 
 ## 3. Where the system succeeds and fails — what we learned from evals
 
-**Format validation**: 100% pass on the one live run so far (easy/medium/
-hard difficulty), confirming the basic pipeline works end-to-end.
+**Format validation**: 100% pass across both live runs (before and after
+the prompt change in Section 4), confirming the basic pipeline works
+end-to-end and that the change didn't regress ordinary Q&A behavior.
 
-**Refusal** (30 cases): 97.5% average pass rate. Three distinct findings,
-none fixed yet (see Section 4):
+**Refusal** (30 cases), first run: 97.5% average, with two findings — a
+weak spot in one specific category (detailed in Section 4, since it's now
+fixed and the "before/after" is more informative there than a static
+snapshot), and a case where the judge itself declined to grade a response
+because its own safety filtering triggered on the sensitive request text
+embedded in the grading prompt. The system's own refusal behavior was
+unaffected by that; it's a limitation of grading the most sensitive
+prompts with an LLM judge, worth knowing rather than hiding. It didn't
+recur on the second run, but a single run isn't enough to call it resolved
+either way — LLM judges (and, per below, the underlying API's content
+filtering) aren't perfectly deterministic.
 
-1. **Gibberish handling is the system's clearest weakness.** 3 of 10
-   gibberish-phrased cases had the agent attempt a search for a made-up
-   term instead of recognizing it as nonsense and declining outright — one
-   exhausted its retry budget and crashed rather than producing any
-   answer. This is a genuine behavior gap, not a flaky eval: the prompt
-   guides the model on when *to* search, but not on recognizing when the
-   input isn't answerable in the first place.
-2. **Grading refusals to the most sensitive prompts has a real ceiling.**
-   For 2 of 10 unsafe-category cases, the judge itself declined to grade
-   the response — its own safety filtering triggered on the sensitive
-   request text embedded in the grading prompt. The system's own refusal
-   behavior was unaffected; this is a limitation of using an LLM judge on
-   the most sensitive content, worth knowing rather than hiding.
-3. **Everything else was handled cleanly** — all unanswerable cases and
-   most unsafe cases scored full marks, including one response that
-   proactively offered safe alternative framings and surfaced a crisis
-   hotline for a self-harm-adjacent prompt, unprompted.
+**Everything else was handled cleanly from the start** — all unanswerable
+cases and most unsafe cases scored full marks, including one response that
+proactively offered safe alternative framings and surfaced a crisis
+hotline for a self-harm-adjacent prompt, unprompted.
 
 ## 4. Key iterations made based on eval results
 
-**None yet, by design.** This pass's scope was building the eval suite and
-letting it expose failure modes, not yet closing the loop. The findings
-above are the backlog for the next iteration:
+One iteration so far, directly from the `refusal` eval's first run:
 
-- Add explicit prompt guidance for recognizing unanswerable/gibberish
-  input before attempting a search.
-- Reconsider what should happen when a search retry budget is exhausted —
-  a hard crash vs. a graceful decline.
-- Decide how to handle prompts sensitive enough to trip the judge's own
-  safety filtering — a different grading approach for that subset, or
-  documenting it as an accepted limitation.
+**Before:** one category of refusal cases was the system's clearest
+weakness — several had the agent attempt a search instead of recognizing
+the input couldn't be resolved that way at all, and one exhausted its
+retry budget and crashed rather than producing any answer. The system
+prompt told the model *when* to search but gave no guidance for
+recognizing when it shouldn't.
+
+**Change:** added one general guideline — decide whether a request is
+genuinely a real, answerable question before searching for it, and say so
+plainly if it isn't, rather than searching or guessing. Deliberately
+written as a general reasoning step rather than a rule naming the specific
+failure category the eval caught, so it generalizes to input shaped
+differently than our 30 test cases, not just those exact ones. The two
+judge rubrics were also tightened — explicit pass/fail definitions plus a
+few illustrative examples apiece, distinct from any of our actual 30 test
+questions so the judge isn't calibrated on the same cases it grades.
+
+**After:** re-ran both datasets. Format validation stayed 100% pass
+(no regression to ordinary behavior). Every case in the previously-weak
+category passed cleanly, and the run that previously crashed completed
+normally — 30/30 cases finished this time, versus 29/30 before.
+
+Still open: whether a search retry budget being exhausted should be a hard
+crash at all, versus a graceful decline; and how to handle prompts
+sensitive enough to trip the judge's own content filtering, if it recurs.
 
 ## 5. How I'd extend this with more time
 
@@ -102,8 +120,9 @@ above are the backlog for the next iteration:
   (correctness), is it actually grounded in what was retrieved rather than
   just plausible-sounding (faithfulness), and did the agent search with a
   query that matches the question's intent (relevancy).
-- Close the loop on the refusal findings above, then re-run to confirm the
-  fix actually moves the numbers.
+- Validate the judge itself against human-labeled examples before trusting
+  it further — right now its alignment with human judgment is assumed, not
+  measured.
 - Scale up case counts once correctness grading exists to pair with them.
 - Wire eval pass-rate thresholds into CI so a regression is visible
   without someone remembering to run the suite by hand.

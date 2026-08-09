@@ -75,7 +75,7 @@ def main(argv: list[str] | None = None) -> None:
             file=sys.stderr,
         )
         sys.exit(1)
-    report.print()
+    report.print(include_reasons=True)
 
 
 if __name__ == "__main__":
