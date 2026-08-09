@@ -10,7 +10,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from app.agent import build_agent
+from app.agent import agent
 from app.runner import run_agent
 
 
@@ -37,10 +37,10 @@ def _fake_no_results_transport(request: httpx.Request) -> httpx.Response:
 
 
 def test_run_agent_records_tool_call_and_answer(wikipedia_mock_transport):
-    agent = build_agent(FunctionModel(_search_then_answer))
-
     with httpx.Client(transport=wikipedia_mock_transport) as client:
-        transcript = run_agent(agent, "Who was Ada Lovelace?", deps=client)
+        transcript = run_agent(
+            agent, "Who was Ada Lovelace?", deps=client, model=FunctionModel(_search_then_answer)
+        )
 
     assert transcript.question == "Who was Ada Lovelace?"
     assert len(transcript.tool_calls) == 1
@@ -51,23 +51,21 @@ def test_run_agent_records_tool_call_and_answer(wikipedia_mock_transport):
 
 
 def test_run_agent_with_no_tool_call_has_empty_tool_calls(wikipedia_mock_transport):
-    agent = build_agent(FunctionModel(_answer_without_searching))
-
     with httpx.Client(transport=wikipedia_mock_transport) as client:
-        transcript = run_agent(agent, "What is 2 + 2?", deps=client)
+        transcript = run_agent(
+            agent, "What is 2 + 2?", deps=client, model=FunctionModel(_answer_without_searching)
+        )
 
     assert transcript.tool_calls == []
     assert transcript.answer == "4"
 
 
 def test_run_agent_propagates_exhausted_retries():
-    agent = build_agent(FunctionModel(_always_fail_search))
-
     with (
         pytest.raises(UnexpectedModelBehavior),
         httpx.Client(transport=httpx.MockTransport(_fake_no_results_transport)) as client,
     ):
-        run_agent(agent, "Who is nobody?", deps=client)
+        run_agent(agent, "Who is nobody?", deps=client, model=FunctionModel(_always_fail_search))
 
 
 def _always_search(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
@@ -79,13 +77,11 @@ def _rate_limited_transport(request: httpx.Request) -> httpx.Response:
 
 
 def test_run_agent_treats_429_as_retry_not_crash():
-    agent = build_agent(FunctionModel(_always_search))
-
     with (
         pytest.raises(UnexpectedModelBehavior),
         httpx.Client(transport=httpx.MockTransport(_rate_limited_transport)) as client,
     ):
-        run_agent(agent, "who knows", deps=client)
+        run_agent(agent, "who knows", deps=client, model=FunctionModel(_always_search))
 
 
 def _search_fails_then_succeeds(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
@@ -112,12 +108,15 @@ def _fake_transport_fails_once_then_succeeds(request: httpx.Request) -> httpx.Re
 
 
 def test_run_agent_records_failed_retry_before_successful_call():
-    agent = build_agent(FunctionModel(_search_fails_then_succeeds))
-
     with httpx.Client(
         transport=httpx.MockTransport(_fake_transport_fails_once_then_succeeds)
     ) as client:
-        transcript = run_agent(agent, "Who was Ada Lovelace?", deps=client)
+        transcript = run_agent(
+            agent,
+            "Who was Ada Lovelace?",
+            deps=client,
+            model=FunctionModel(_search_fails_then_succeeds),
+        )
 
     assert len(transcript.tool_calls) == 2
     assert transcript.tool_calls[0].tool_name == "search_wikipedia"

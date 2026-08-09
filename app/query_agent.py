@@ -1,8 +1,4 @@
-"""CLI entrypoint: ask the agent one question, print an auditable report.
-
-This is the only module in app/ with argparse/printing/CLI-specific error
-handling. It depends on app.agent and app.runner; nothing else depends on it.
-"""
+"""CLI entrypoint: ask the agent one question, print an auditable report."""
 
 import argparse
 import sys
@@ -10,11 +6,23 @@ from collections.abc import Callable, Sequence
 
 import httpx
 from pydantic import ValidationError
-from pydantic_ai import Agent
+from pydantic_ai.models import KnownModelName, Model
+from pydantic_ai.models.anthropic import AnthropicModel
+from pydantic_ai.providers.anthropic import AnthropicProvider
 
-from app.agent import build_agent
+from app.agent import agent
+from app.config import Settings
 from app.runner import RunTranscript, run_agent
 from app.tools import WIKIPEDIA_USER_AGENT
+
+
+def _resolve_real_model() -> Model | KnownModelName:
+    """Resolve the real Anthropic model from Settings (.env)."""
+    settings = Settings()
+    return AnthropicModel(
+        settings.anthropic_model,
+        provider=AnthropicProvider(api_key=settings.anthropic_api_key.get_secret_value()),
+    )
 
 
 def format_transcript(transcript: RunTranscript) -> str:
@@ -36,14 +44,14 @@ def format_transcript(transcript: RunTranscript) -> str:
 def main(
     argv: Sequence[str] | None = None,
     *,
-    agent_factory: Callable[[], Agent[httpx.Client, str]] = build_agent,
+    model_factory: Callable[[], Model | KnownModelName] = _resolve_real_model,
 ) -> None:
     parser = argparse.ArgumentParser(description="Ask the Wikipedia Q&A agent a question.")
     parser.add_argument("question")
     args = parser.parse_args(argv)
 
     try:
-        agent = agent_factory()
+        model = model_factory()
     except ValidationError:
         print(
             "Error: ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key.",
@@ -52,7 +60,7 @@ def main(
         sys.exit(1)
 
     with httpx.Client(headers={"User-Agent": WIKIPEDIA_USER_AGENT}, timeout=30.0) as client:
-        transcript = run_agent(agent, args.question, deps=client)
+        transcript = run_agent(agent, args.question, deps=client, model=model)
 
     print(format_transcript(transcript))
 

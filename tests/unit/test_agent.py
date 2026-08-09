@@ -2,18 +2,16 @@ import httpx
 from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.models.test import TestModel
 
-from app.agent import build_agent
+from app.agent import agent
 from app.tools import WIKIPEDIA_USER_AGENT
 
 
-def test_build_agent_registers_search_wikipedia_tool(wikipedia_mock_transport):
-    agent = build_agent(TestModel())
-
+def test_agent_registers_search_wikipedia_tool(wikipedia_mock_transport):
     with httpx.Client(
         transport=wikipedia_mock_transport,
         headers={"User-Agent": WIKIPEDIA_USER_AGENT},
     ) as client:
-        result = agent.run_sync("Who was Ada Lovelace?", deps=client)
+        result = agent.run_sync("Who was Ada Lovelace?", deps=client, model=TestModel())
 
     tool_calls = [
         part

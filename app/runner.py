@@ -1,5 +1,5 @@
 """Runs a question through the agent and builds an auditable transcript from
-Pydantic AI's own message history — no hand-rolled tool-call tracking.
+Pydantic AI's own message history.
 """
 
 from typing import Any
@@ -8,6 +8,7 @@ import httpx
 from pydantic import BaseModel
 from pydantic_ai import Agent, AgentRunResult
 from pydantic_ai.messages import RetryPromptPart, ToolCallPart, ToolReturnPart
+from pydantic_ai.models import KnownModelName, Model
 
 
 class ToolCallRecord(BaseModel):
@@ -22,13 +23,22 @@ class RunTranscript(BaseModel):
     answer: str
 
 
-def run_agent(agent: Agent[httpx.Client, str], question: str, deps: httpx.Client) -> RunTranscript:
-    """Run `question` through `agent` and return an auditable transcript.
+def run_agent(
+    agent: Agent[httpx.Client, str],
+    question: str,
+    deps: httpx.Client,
+    model: Model | KnownModelName,
+) -> RunTranscript:
+    """Run `question` through `agent`, using `model` to answer, and return an
+    auditable transcript.
+
+    `model` is required, not defaulted — pass the real resolved model in
+    production, or a fake (`TestModel()`, `FunctionModel(...)`) in tests.
 
     Raises whatever the underlying agent run raises (e.g. `UnexpectedModelBehavior`
     when tool retries are exhausted) — callers decide how to handle failure.
     """
-    result = agent.run_sync(question, deps=deps)
+    result = agent.run_sync(question, deps=deps, model=model)
     return _build_transcript(question, result)
 
 

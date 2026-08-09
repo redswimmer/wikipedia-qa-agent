@@ -6,18 +6,19 @@ so, and answers — telling you whether search was used.
 
 ## Quickstart
 
-Requires [uv](https://docs.astral.sh/uv/) (Python 3.13 is pinned via `uv`, no
-separate install needed) and an
-[Anthropic API key](https://console.anthropic.com/settings/keys).
+Requires [uv](https://docs.astral.sh/uv/) and an [Anthropic API key](https://console.anthropic.com/settings/keys).
 
 ```bash
+# Install Dependencies
 uv sync
+# Copy environment example and set your Anthropic API key
 cp .env.example .env   # then edit .env and set ANTHROPIC_API_KEY
+# Query the agent
 uv run python -m app.query_agent "In what year was the Eiffel Tower completed?"
 ```
 
-That's it — that one command asks the agent a question and prints its answer.
-Here's real output from that exact command:
+
+Example Reponse:
 
 ```
 Question: In what year was the Eiffel Tower completed?
@@ -38,11 +39,6 @@ The Eiffel Tower was completed in 1889.
 The output always shows three things: the question, every Wikipedia search the
 agent ran (its query and what it found), and the final answer — so you can see
 exactly what the agent looked up before answering, not just the answer itself.
-Ask it anything else the same way:
-
-```bash
-uv run python -m app.query_agent "Who wrote the Declaration of Independence?"
-```
 
 ## Evals
 

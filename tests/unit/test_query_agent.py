@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from pydantic_ai import Agent
+from pydantic_ai.models import KnownModelName, Model
 
 from app import query_agent
 from app.runner import RunTranscript, ToolCallRecord
@@ -29,13 +29,13 @@ def test_format_transcript_includes_question_tool_calls_and_answer():
 
 
 def test_main_exits_with_friendly_message_when_api_key_missing(capsys):
-    def raise_validation_error() -> Agent:
+    def raise_validation_error() -> Model | KnownModelName:
         raise ValidationError.from_exception_data(
             "Settings", [{"type": "missing", "loc": ("anthropic_api_key",), "input": {}}]
         )
 
     with pytest.raises(SystemExit) as exc_info:
-        query_agent.main(["irrelevant question"], agent_factory=raise_validation_error)
+        query_agent.main(["irrelevant question"], model_factory=raise_validation_error)
 
     assert exc_info.value.code == 1
     assert "ANTHROPIC_API_KEY is not set" in capsys.readouterr().err
