@@ -37,7 +37,7 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["app"]
+known-first-party = ["app", "evaluations"]
 
 [tool.ty.environment]
 python-version = "3.13"

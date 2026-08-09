@@ -6,8 +6,9 @@ Ruslan Salakhutdinov, Christopher D. Manning
 
 arXiv:1809.09600v1 [cs.CL], 25 Sep 2018 — https://HotpotQA.github.io
 
-> Extracted from `docs/hotpotqa_1809.09600v1.pdf` via `pdftotext -layout` for
-> easier reading; not a substitute for the original PDF's figures.
+> Extracted from the paper's PDF (https://arxiv.org/abs/1809.09600) via
+> `pdftotext -layout` for easier reading; not a substitute for the original
+> PDF's figures.
 
 ## Abstract
 

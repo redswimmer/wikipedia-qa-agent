@@ -1,8 +1,11 @@
+from pathlib import Path
+
+from pydantic_evals import Dataset
 from pydantic_evals.evaluators import EvaluatorContext
 from pydantic_evals.otel import SpanTreeRecordingError
 
 from app.runner import RunTranscript, ToolCallRecord
-from evaluations.evaluators import TranscriptWellFormed
+from evaluations.evaluators import CUSTOM_EVALUATOR_TYPES, TranscriptWellFormed
 from evaluations.models import HotpotQAMetadata
 
 
@@ -56,3 +59,15 @@ def test_empty_tool_call_result_fails_tool_calls_check():
     result = TranscriptWellFormed().evaluate_sync(_ctx(transcript))
 
     assert result["tool_calls_well_formed"] is False  # type: ignore
+
+
+def test_format_validation_dataset_loads():
+    dataset = Dataset[str, RunTranscript, HotpotQAMetadata].from_file(
+        Path("evaluations/datasets/format_validation.yaml"),
+        custom_evaluator_types=CUSTOM_EVALUATOR_TYPES,
+    )
+    levels = []
+    for case in dataset.cases:
+        assert case.metadata is not None
+        levels.append(case.metadata.level)
+    assert levels == ["easy", "medium", "hard"]
