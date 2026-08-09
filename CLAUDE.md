@@ -37,16 +37,6 @@ directories up (`development/pyproject.toml`, `[tool.uv.workspace]`). `uv
 sync`/`uv run` here resolve against that shared workspace environment and
 lockfile, not an isolated venv.
 
-**Lockfile gotcha:** that outer workspace root is local-only — it isn't part
-of this git repo, and CI checks out this repo standalone. That means `uv add`
-run from this directory updates the *outer* `../../uv.lock`, not the
-`uv.lock` committed here, silently leaving the committed one stale until CI's
-`uv sync --locked --all-groups` rejects it. After adding/changing a
-dependency, verify the committed `uv.lock` independently of the outer
-workspace — e.g. sync a copy of this repo in a directory outside the `uv`
-workspace tree and confirm `uv sync --locked --all-groups` passes there
-before pushing.
-
 ## Architecture
 
 - `app/agent.py`, `app/prompts.py`, `app/tools.py` — the agent split into
