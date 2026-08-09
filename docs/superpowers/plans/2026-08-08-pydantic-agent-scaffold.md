@@ -587,7 +587,7 @@ git commit -m "Add run_agent(): builds an auditable RunTranscript from agent mes
 
 **Interfaces:**
 - Consumes: `app.agent.build_agent` (Task 3), `app.runner.run_agent`/`RunTranscript` (Task 4), `app.tools.WIKIPEDIA_USER_AGENT` (Task 2).
-- Produces: `app.query_agent.format_transcript(transcript: RunTranscript) -> str`, `app.query_agent.main(argv: Sequence[str] | None = None) -> None`. Nothing else may depend on this module.
+- Produces: `app.query_agent.format_transcript(transcript: RunTranscript) -> str`, `app.query_agent.main(argv: Sequence[str] | None = None, *, agent_factory: Callable[[], Agent] = build_agent) -> None`. Nothing else may depend on this module.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -624,22 +624,20 @@ def test_format_transcript_includes_question_tool_calls_and_answer():
     assert output.strip().endswith("Paris is the capital of France.")
 
 
-def test_main_exits_with_friendly_message_when_api_key_missing(capsys, monkeypatch):
+def test_main_exits_with_friendly_message_when_api_key_missing(capsys):
     def raise_validation_error() -> Agent:
         raise ValidationError.from_exception_data(
             "Settings", [{"type": "missing", "loc": ("anthropic_api_key",), "input": {}}]
         )
 
-    monkeypatch.setattr(query_agent, "build_agent", raise_validation_error)
-
     with pytest.raises(SystemExit) as exc_info:
-        query_agent.main(["irrelevant question"])
+        query_agent.main(["irrelevant question"], agent_factory=raise_validation_error)
 
     assert exc_info.value.code == 1
     assert "ANTHROPIC_API_KEY is not set" in capsys.readouterr().err
 ```
 
-`monkeypatch.setattr(query_agent, "build_agent", ...)` replaces the name `query_agent.py` imported into its own module namespace — this is the same fakeable seam `build_agent(model=...)` already provides everywhere else, just substituted via `monkeypatch` instead of a call argument, since `main()`'s only hook into agent construction is calling `build_agent()` with no arguments (to resolve the real `.env`-driven model). No real network, no `mock.patch` on an I/O client.
+`main()` takes an injectable `agent_factory` (defaulting to the real `build_agent`) instead of calling `build_agent()` directly — this is a real dependency-injection seam, not a patched collaborator: the test passes a hand-written fake factory as a normal argument, exactly the "fakes over patches" / cosmicpython chapter 3 pattern documented in `CLAUDE.md`'s Design principles, rather than reaching for `monkeypatch.setattr`/`mock.patch` to swap out `build_agent` inside the module. No real network, no patching.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -659,10 +657,11 @@ handling. It depends on app.agent and app.runner; nothing else depends on it.
 
 import argparse
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import httpx
 from pydantic import ValidationError
+from pydantic_ai import Agent
 
 from app.agent import build_agent
 from app.runner import RunTranscript, run_agent
@@ -685,13 +684,17 @@ def format_transcript(transcript: RunTranscript) -> str:
     return "\n".join(lines)
 
 
-def main(argv: Sequence[str] | None = None) -> None:
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    agent_factory: Callable[[], Agent] = build_agent,
+) -> None:
     parser = argparse.ArgumentParser(description="Ask the Wikipedia Q&A agent a question.")
     parser.add_argument("question")
     args = parser.parse_args(argv)
 
     try:
-        agent = build_agent()
+        agent = agent_factory()
     except ValidationError:
         print(
             "Error: ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key.",
