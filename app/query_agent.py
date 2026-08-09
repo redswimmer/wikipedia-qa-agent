@@ -4,25 +4,12 @@ import argparse
 import sys
 from collections.abc import Callable, Sequence
 
-import httpx
 from pydantic import ValidationError
 from pydantic_ai.models import KnownModelName, Model
-from pydantic_ai.models.anthropic import AnthropicModel
-from pydantic_ai.providers.anthropic import AnthropicProvider
 
-from app.agent import agent
-from app.config import Settings
+from app.agent import agent, resolve_real_model
 from app.runner import RunTranscript, run_agent
-from app.tools import WIKIPEDIA_USER_AGENT
-
-
-def _resolve_real_model() -> Model | KnownModelName:
-    """Resolve the real Anthropic model from Settings (.env)."""
-    settings = Settings()
-    return AnthropicModel(
-        settings.anthropic_model,
-        provider=AnthropicProvider(api_key=settings.anthropic_api_key.get_secret_value()),
-    )
+from app.tools import build_wikipedia_client
 
 
 def format_transcript(transcript: RunTranscript) -> str:
@@ -44,7 +31,7 @@ def format_transcript(transcript: RunTranscript) -> str:
 def main(
     argv: Sequence[str] | None = None,
     *,
-    model_factory: Callable[[], Model | KnownModelName] = _resolve_real_model,
+    model_factory: Callable[[], Model | KnownModelName] = resolve_real_model,
 ) -> None:
     parser = argparse.ArgumentParser(description="Ask the Wikipedia Q&A agent a question.")
     parser.add_argument("question")
@@ -59,7 +46,7 @@ def main(
         )
         sys.exit(1)
 
-    with httpx.Client(headers={"User-Agent": WIKIPEDIA_USER_AGENT}, timeout=30.0) as client:
+    with build_wikipedia_client() as client:
         transcript = run_agent(agent, args.question, deps=client, model=model)
 
     print(format_transcript(transcript))
