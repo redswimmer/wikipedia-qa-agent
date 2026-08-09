@@ -18,17 +18,17 @@ from pydantic_ai.models import KnownModelName, Model
 from app import query_agent
 
 
-def test_format_progress_line_for_tool_call():
+def test_progress_parts_for_tool_call():
     event = FunctionToolCallEvent(
         part=ToolCallPart(
             tool_name="search_wikipedia", args={"query": "Ada Lovelace"}, tool_call_id="1"
         )
     )
 
-    assert query_agent._format_progress_line(event) == "  → search_wikipedia(query='Ada Lovelace')"
+    assert query_agent._progress_parts(event) == ("→", "search_wikipedia(query='Ada Lovelace')")
 
 
-def test_format_progress_line_for_tool_result():
+def test_progress_parts_for_tool_result():
     event = FunctionToolResultEvent(
         part=ToolReturnPart(
             tool_name="search_wikipedia",
@@ -37,23 +37,23 @@ def test_format_progress_line_for_tool_result():
         )
     )
 
-    assert query_agent._format_progress_line(event) == "  ← Ada Lovelace was a mathematician."
+    assert query_agent._progress_parts(event) == ("←", "Ada Lovelace was a mathematician.")
 
 
-def test_format_progress_line_for_retried_tool_result():
+def test_progress_parts_for_retried_tool_result():
     event = FunctionToolResultEvent(
         part=RetryPromptPart(
             tool_name="search_wikipedia", content="No article found", tool_call_id="1"
         )
     )
 
-    assert query_agent._format_progress_line(event) == "  ← [retry] No article found"
+    assert query_agent._progress_parts(event) == ("←", "[retry] No article found")
 
 
-def test_format_progress_line_for_unrelated_event_is_none():
+def test_progress_parts_for_unrelated_event_is_none():
     event = PartStartEvent(index=0, part=TextPart(content="hi"))
 
-    assert query_agent._format_progress_line(event) is None
+    assert query_agent._progress_parts(event) is None
 
 
 def test_text_delta_extracts_content_from_text_part_delta():

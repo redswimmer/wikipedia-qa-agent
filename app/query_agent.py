@@ -30,14 +30,14 @@ def _colorize(text: str, code: str, *, enabled: bool) -> str:
     return f"{code}{text}{_RESET}" if enabled else text
 
 
-def _format_progress_line(event: AgentStreamEvent) -> str | None:
+def _progress_parts(event: AgentStreamEvent) -> tuple[str, str] | None:
     if isinstance(event, FunctionToolCallEvent):
         args_str = ", ".join(f"{k}={v!r}" for k, v in event.part.args_as_dict().items())
-        return f"  → {event.part.tool_name}({args_str})"
+        return "→", f"{event.part.tool_name}({args_str})"
     if isinstance(event, FunctionToolResultEvent):
         if isinstance(event.part, RetryPromptPart):
-            return f"  ← [retry] {event.part.content}"
-        return f"  ← {event.part.content}"
+            return "←", f"[retry] {event.part.content}"
+        return "←", str(event.part.content)
     return None
 
 
@@ -62,12 +62,13 @@ async def _print_progress(ctx: RunContext, events: AsyncIterable[AgentStreamEven
                 answer_started = True
             print(delta, end="", flush=True)
             continue
-        line = _format_progress_line(event)
-        if line is not None:
+        parts = _progress_parts(event)
+        if parts is not None:
             if not tool_calls_started:
                 print(_colorize("Tool calls:", _DIM, enabled=stderr_color), file=sys.stderr)
                 tool_calls_started = True
-            print(_colorize(line, _DIM, enabled=stderr_color), file=sys.stderr)
+            arrow, rest = parts
+            print(f"  {_colorize(arrow, _DIM, enabled=stderr_color)} {rest}", file=sys.stderr)
 
 
 def main(
