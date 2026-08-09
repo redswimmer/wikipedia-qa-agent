@@ -69,7 +69,19 @@ it again is a no-op.
 Run: `uv run python -c "import datasets; print(datasets.__version__)"`
 Expected: prints a version string (e.g. `5.0.1`), no error.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Verify the committed lockfile actually matches**
+
+This repo is a standalone `uv` project (not nested in any parent
+workspace — see CONTRIBUTING.md's "Notes" section for why that matters and
+what broke when it briefly was), so `uv add` in Step 1 updated this repo's
+own `uv.lock` directly. Confirm:
+
+Run: `uv sync --locked --all-groups`
+Expected: succeeds with no "lockfile needs to be updated" error — this
+means `uv.lock` and `pyproject.toml` genuinely match, so anyone cloning
+this repo fresh (CI, a reviewer) gets a working `uv sync`.
+
+- [ ] **Step 4: Commit**
 
 ```bash
 git add pyproject.toml uv.lock
@@ -890,8 +902,10 @@ needs the same API key and network access as the CLI, nothing more.
 
 - [ ] **Step 5: Add a case-sourcing note to CONTRIBUTING.md**
 
-Find the `## Notes` section's bullet list (starts with "This project is a
-member of a `uv` workspace..."). Add a new bullet at the end:
+Find the `## Notes` section's bullet list (starts with "This is a
+standalone `uv` project..." — already updated separately, during planning,
+to fix a lockfile-drift bug caused by an earlier accidental parent-workspace
+nesting; not part of this task). Add a new bullet at the end:
 
 ```markdown
 - To add more HotpotQA-sourced cases to an eval dataset: use the

@@ -31,10 +31,11 @@ Every commit runs ruff (lint + format), `ty`, and pytest via pre-commit; the
 same checks run in CI (`.github/workflows/ci.yml`). A hook failure blocks the
 commit — fix and re-commit rather than bypassing it.
 
-**Workspace note:** this project is a member of a `uv` workspace rooted two
-directories up (`development/pyproject.toml`, `[tool.uv.workspace]`). `uv
-sync`/`uv run` here resolve against that shared workspace environment and
-lockfile, not an isolated venv.
+This is a standalone `uv` project — `uv sync`/`uv run` resolve against this
+repo's own `.venv` and `uv.lock`, nothing outside it. (It briefly lived as
+a member of a single-purpose parent workspace; that caused `uv add` to
+silently update the wrong lockfile — a real bug this history exists to
+prevent regressing. Keep it standalone.)
 
 ## Design principles
 

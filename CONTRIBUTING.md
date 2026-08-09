@@ -48,8 +48,11 @@ uv run pre-commit run --all-files
 
 ## Notes
 
-- This project is a member of a `uv` workspace rooted two directories up.
-  `uv run`/`uv sync` from this directory resolve against that shared
-  workspace environment and lockfile — you don't need a separate virtualenv
-  here.
+- This is a standalone `uv` project — `uv sync` creates its own `.venv` here
+  and resolves against this repo's own `uv.lock`. Don't nest it inside a
+  parent `uv` workspace: this repo is submitted/cloned standalone (and CI
+  checks out only this repo), so a shared workspace lockfile above it can
+  silently drift from what's actually committed here — `uv add` would
+  update the *workspace's* lockfile instead of this repo's, leaving
+  `uv sync --locked` broken for anyone who clones just this repo.
 - Requires Python >= 3.13 (see `pyproject.toml`).
