@@ -11,6 +11,7 @@ agent: Agent[httpx.Client, str] = Agent(
     instructions=SYSTEM_PROMPT,
     deps_type=httpx.Client,
     tools=[search_wikipedia],
+    retries=3,
 )
 # Emits OpenTelemetry spans for agent runs and tool calls. Harmless without
 # instrumentation configured (spans go to a no-op tracer) — the eval suite

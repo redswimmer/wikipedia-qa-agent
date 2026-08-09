@@ -35,6 +35,22 @@ logfire.instrument_pydantic_ai()
 DATASETS_DIR = Path(__file__).parent / "datasets"
 
 
+def _format_transcript(transcript: RunTranscript) -> str:
+    """LLMJudge evaluators already grade against this full transcript (see
+    app/runner.py); this surfaces the same evidence in the printed report so
+    a verdict can be checked by eye instead of via Logfire."""
+    sections = [f"Answer:\n{transcript.answer}"]
+    if transcript.tool_calls:
+        # No square brackets in labels: Rich's Table treats "[...]" as markup
+        # and silently drops anything it doesn't recognize as a valid style.
+        calls = "\n\n".join(
+            f"{call.tool_name} → {call.args.get('query', call.args)!r}:\n{call.result}"
+            for call in transcript.tool_calls
+        )
+        sections.append(f"Tool Calls:\n{calls}")
+    return "\n\n".join(sections)
+
+
 def _export_api_key_for_native_evaluators() -> None:
     """LLMJudge's `model` field always round-trips through YAML as a plain model
     string (pydantic_evals converts any Model instance to its model_id string on
@@ -101,7 +117,7 @@ def main(argv: list[str] | None = None) -> None:
     report.print(
         include_input=True,
         include_output=True,
-        output_config={"value_formatter": "{0.answer}"},
+        output_config={"value_formatter": _format_transcript},
         include_reasons=True,
     )
 
