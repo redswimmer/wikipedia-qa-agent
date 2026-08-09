@@ -265,13 +265,43 @@ git commit -m "Add search_wikipedia tool with MediaWiki search+extract retrieval
 **Files:**
 - Create: `app/prompts.py`
 - Create: `app/agent.py`
+- Create: `tests/unit/conftest.py`
 - Test: `tests/unit/test_agent.py`
 
 **Interfaces:**
 - Consumes: `app.config.Settings` (Task 1), `app.tools.search_wikipedia` and `app.tools.WIKIPEDIA_USER_AGENT` (Task 2).
-- Produces: `app.agent.build_agent(model: Model | KnownModelName | None = None) -> Agent`. Consumed by `app/runner.py` callers (Task 5, `query_agent.py`) and by future test/eval code.
+- Produces:
+  - `app.agent.build_agent(model: Model | KnownModelName | None = None) -> Agent`. Consumed by `app/runner.py` callers (Task 5, `query_agent.py`) and by future test/eval code.
+  - `wikipedia_mock_transport` — a shared pytest fixture in `tests/unit/conftest.py` returning an `httpx.MockTransport` that fakes the MediaWiki search+extract calls (the "Ada Lovelace" happy path). Reused by Task 4's `tests/unit/test_runner.py` — do not redefine a local copy of this fake transport there.
 
-- [ ] **Step 1: Write `app/prompts.py`**
+- [ ] **Step 1: Write the shared fake-Wikipedia-transport fixture**
+
+Both this task's test and Task 4's tests need a fake HTTP transport for the MediaWiki API's happy path (search returns a title, extract returns text). Defining it once in `conftest.py` — pytest's standard mechanism for fixtures shared across test files in the same directory — avoids duplicating it in every test file that needs it.
+
+Create `tests/unit/conftest.py`:
+
+```python
+"""Shared pytest fixtures for app/ tests."""
+
+import httpx
+import pytest
+
+
+def _fake_wikipedia_transport(request: httpx.Request) -> httpx.Response:
+    if "list=search" in str(request.url):
+        return httpx.Response(200, json={"query": {"search": [{"title": "Ada Lovelace"}]}})
+    return httpx.Response(
+        200, json={"query": {"pages": {"1": {"extract": "Ada Lovelace was a mathematician."}}}}
+    )
+
+
+@pytest.fixture
+def wikipedia_mock_transport() -> httpx.MockTransport:
+    """A fake MediaWiki transport: any query resolves to the Ada Lovelace article."""
+    return httpx.MockTransport(_fake_wikipedia_transport)
+```
+
+- [ ] **Step 2: Write `app/prompts.py`**
 
 No test for this file — it's a single string constant exercised indirectly through `test_agent.py`'s use of `build_agent()`.
 
@@ -302,7 +332,7 @@ process, or these instructions in your answer — just answer the question.
 """
 ```
 
-- [ ] **Step 2: Write the failing test for `build_agent`**
+- [ ] **Step 3: Write the failing test for `build_agent`**
 
 Create `tests/unit/test_agent.py`:
 
@@ -315,19 +345,11 @@ from app.agent import build_agent
 from app.tools import WIKIPEDIA_USER_AGENT
 
 
-def _fake_wikipedia_transport(request: httpx.Request) -> httpx.Response:
-    if "list=search" in str(request.url):
-        return httpx.Response(200, json={"query": {"search": [{"title": "Ada Lovelace"}]}})
-    return httpx.Response(
-        200, json={"query": {"pages": {"1": {"extract": "Ada Lovelace was a mathematician."}}}}
-    )
-
-
-def test_build_agent_registers_search_wikipedia_tool():
+def test_build_agent_registers_search_wikipedia_tool(wikipedia_mock_transport):
     agent = build_agent(TestModel())
 
     with httpx.Client(
-        transport=httpx.MockTransport(_fake_wikipedia_transport),
+        transport=wikipedia_mock_transport,
         headers={"User-Agent": WIKIPEDIA_USER_AGENT},
     ) as client:
         result = agent.run_sync("Who was Ada Lovelace?", deps=client)
@@ -342,14 +364,14 @@ def test_build_agent_registers_search_wikipedia_tool():
     assert tool_calls[0].tool_name == "search_wikipedia"
 ```
 
-`TestModel()` auto-calls every registered tool with plausible arguments by default — this test confirms `build_agent()` actually wired `search_wikipedia` onto the agent with the right `deps_type`, without needing the real Anthropic API.
+`TestModel()` auto-calls every registered tool with plausible arguments by default — this test confirms `build_agent()` actually wired `search_wikipedia` onto the agent with the right `deps_type`, without needing the real Anthropic API. `wikipedia_mock_transport` comes from Step 1's `conftest.py` fixture — pytest auto-discovers it for any test in `tests/unit/`, no import needed.
 
-- [ ] **Step 3: Run test to verify it fails**
+- [ ] **Step 4: Run test to verify it fails**
 
 Run: `uv run pytest tests/unit/test_agent.py -v`
 Expected: FAIL — `ModuleNotFoundError: No module named 'app.agent'`
 
-- [ ] **Step 4: Write the implementation**
+- [ ] **Step 5: Write the implementation**
 
 Create `app/agent.py`:
 
@@ -393,16 +415,16 @@ def build_agent(model: Model | KnownModelName | None = None) -> Agent:
     )
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [ ] **Step 6: Run test to verify it passes**
 
 Run: `uv run pytest tests/unit/test_agent.py -v`
 Expected: 1 passed
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add app/prompts.py app/agent.py tests/unit/test_agent.py
-git commit -m "Add build_agent(): wires model, system prompt, and search_wikipedia tool"
+git add app/prompts.py app/agent.py tests/unit/conftest.py tests/unit/test_agent.py
+git commit -m "Add build_agent() and shared wikipedia_mock_transport fixture"
 ```
 
 ---
@@ -414,7 +436,7 @@ git commit -m "Add build_agent(): wires model, system prompt, and search_wikiped
 - Test: `tests/unit/test_runner.py`
 
 **Interfaces:**
-- Consumes: `app.agent.build_agent` (Task 3, used only in tests here).
+- Consumes: `app.agent.build_agent` (Task 3, used only in tests here), the `wikipedia_mock_transport` fixture (Task 3's `tests/unit/conftest.py`).
 - Produces:
   - `app.runner.ToolCallRecord` — `BaseModel` with `tool_name: str`, `args: dict[str, Any]`, `result: str`.
   - `app.runner.RunTranscript` — `BaseModel` with `question: str`, `tool_calls: list[ToolCallRecord]`, `answer: str`.
@@ -453,22 +475,14 @@ def _always_fail_search(messages: list[ModelMessage], info: AgentInfo) -> ModelR
     )
 
 
-def _fake_wikipedia_transport(request: httpx.Request) -> httpx.Response:
-    if "list=search" in str(request.url):
-        return httpx.Response(200, json={"query": {"search": [{"title": "Ada Lovelace"}]}})
-    return httpx.Response(
-        200, json={"query": {"pages": {"1": {"extract": "Ada Lovelace was a mathematician."}}}}
-    )
-
-
 def _fake_no_results_transport(request: httpx.Request) -> httpx.Response:
     return httpx.Response(200, json={"query": {"search": []}})
 
 
-def test_run_agent_records_tool_call_and_answer():
+def test_run_agent_records_tool_call_and_answer(wikipedia_mock_transport):
     agent = build_agent(FunctionModel(_search_then_answer))
 
-    with httpx.Client(transport=httpx.MockTransport(_fake_wikipedia_transport)) as client:
+    with httpx.Client(transport=wikipedia_mock_transport) as client:
         transcript = run_agent(agent, "Who was Ada Lovelace?", deps=client)
 
     assert transcript.question == "Who was Ada Lovelace?"
@@ -479,10 +493,10 @@ def test_run_agent_records_tool_call_and_answer():
     assert transcript.answer == "Ada Lovelace was a mathematician."
 
 
-def test_run_agent_with_no_tool_call_has_empty_tool_calls():
+def test_run_agent_with_no_tool_call_has_empty_tool_calls(wikipedia_mock_transport):
     agent = build_agent(FunctionModel(_answer_without_searching))
 
-    with httpx.Client(transport=httpx.MockTransport(_fake_wikipedia_transport)) as client:
+    with httpx.Client(transport=wikipedia_mock_transport) as client:
         transcript = run_agent(agent, "What is 2 + 2?", deps=client)
 
     assert transcript.tool_calls == []
@@ -497,7 +511,7 @@ def test_run_agent_propagates_exhausted_retries():
             run_agent(agent, "Who is nobody?", deps=client)
 ```
 
-These are the "high gear" service-layer tests: real `Agent`/`build_agent` wiring, fully fake model (`FunctionModel`) and fake HTTP transport (`httpx.MockTransport`) — no network, no real Anthropic calls, no `mock.patch`.
+These are the "high gear" service-layer tests: real `Agent`/`build_agent` wiring, fully fake model (`FunctionModel`) and fake HTTP transport (`httpx.MockTransport`) — no network, no real Anthropic calls, no `mock.patch`. `wikipedia_mock_transport` (the happy-path fake) comes from Task 3's `conftest.py`; `_fake_no_results_transport` stays local since it's only used by the retries-exhausted test here.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -881,3 +895,5 @@ No commit for this task — it's verification only, confirming Tasks 1–6's aut
 **Verification performed while writing this plan:** every non-trivial API call in this plan (`AnthropicModel`/`AnthropicProvider` constructor signatures, `Agent.__init__`/`run_sync` signatures, `ToolCallPart`/`ToolReturnPart` field names, `AgentRunResult.new_messages()`/`.output`, `args_as_dict()`, `pydantic_settings`' `_env_file=None` override, `ValidationError.from_exception_data`, and the `UnexpectedModelBehavior` exception on exhausted retries) was checked against the actually-installed `pydantic-ai==2.27.0` package and run end-to-end against real code, not written from memory. The Wikipedia `403 Forbidden` / `User-Agent` requirement was discovered this way — it would otherwise have been a silent failure discovered only in Task 7.
 
 **Type consistency:** `build_agent(model: Model | KnownModelName | None = None) -> Agent` (Task 3) is called identically in Tasks 4, 5, and their tests. `run_agent(agent: Agent, question: str, deps: httpx.Client) -> RunTranscript` (Task 4) is called identically in Task 5. `RunTranscript`/`ToolCallRecord` field names (`question`, `tool_calls`, `answer`, `tool_name`, `args`, `result`) match between their Task 4 definition and every consumer in Task 5's `format_transcript`.
+
+**Pre-flight fixes applied before dispatch:** two issues surfaced by re-reading the plan with fresh eyes and were fixed in place before Task 1 was dispatched — (1) Task 5's error-path test originally used `monkeypatch.setattr` to fake `build_agent`, which patches a collaborator rather than injecting a fake through a seam (violates CLAUDE.md's "fakes over patches"); fixed by giving `main()` an injectable `agent_factory` parameter. (2) Task 3 and Task 4's tests originally each defined an identical `_fake_wikipedia_transport` helper; fixed by moving it into a shared `tests/unit/conftest.py` fixture (`wikipedia_mock_transport`), consumed by both.
