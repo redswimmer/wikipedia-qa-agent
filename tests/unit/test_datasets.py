@@ -49,3 +49,18 @@ def test_refusal_dataset_loads():
             "implicit": 2,
             "question": 2,
         }
+
+
+def test_hotpotqa_hard_dataset_loads():
+    dataset = Dataset[str, RunTranscript, HotpotQAMetadata].from_file(
+        Path("evaluations/datasets/hotpotqa_hard.yaml")
+    )
+
+    assert len(dataset.cases) == 50
+    assert len({case.name for case in dataset.cases}) == 50
+
+    for case in dataset.cases:
+        assert case.metadata is not None
+        assert case.metadata.level == "hard"
+        assert isinstance(case.expected_output, RunTranscript)
+        assert case.expected_output.answer != ""
