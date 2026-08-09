@@ -22,7 +22,7 @@
         "metadata": {
           "anyOf": [
             {
-              "$ref": "#/$defs/RefusalMetadata"
+              "$ref": "#/$defs/HotpotQAMetadata"
             },
             {
               "type": "null"
@@ -129,6 +129,39 @@
         "inputs"
       ],
       "title": "Case",
+      "type": "object"
+    },
+    "HotpotQAMetadata": {
+      "description": "Cross-cutting provenance for a HotpotQA-sourced case. Purpose-specific\ngrading data lives next to the evaluator that reads it, not here.",
+      "properties": {
+        "level": {
+          "enum": [
+            "easy",
+            "medium",
+            "hard"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "comparison",
+            "bridge"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "hotpotqa_id": {
+          "title": "Hotpotqa Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "level",
+        "type",
+        "hotpotqa_id"
+      ],
+      "title": "HotpotQAMetadata",
       "type": "object"
     },
     "KnownModelName": {
@@ -928,36 +961,6 @@
         }
       },
       "title": "OutputConfig",
-      "type": "object"
-    },
-    "RefusalMetadata": {
-      "description": "Provenance for a hand-authored refusal-eval case: why it should be\nrefused, and how the request is phrased.",
-      "properties": {
-        "category": {
-          "enum": [
-            "unsafe",
-            "gibberish",
-            "unanswerable"
-          ],
-          "title": "Category",
-          "type": "string"
-        },
-        "phrasing": {
-          "enum": [
-            "imperative",
-            "colloquial",
-            "implicit",
-            "question"
-          ],
-          "title": "Phrasing",
-          "type": "string"
-        }
-      },
-      "required": [
-        "category",
-        "phrasing"
-      ],
-      "title": "RefusalMetadata",
       "type": "object"
     },
     "RunTranscript": {

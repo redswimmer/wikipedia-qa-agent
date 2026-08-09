@@ -9,7 +9,9 @@ from typing import Any
 
 import logfire
 from pydantic import ValidationError
+from pydantic_ai.retries import RetryConfig
 from pydantic_evals import Dataset
+from tenacity import stop_after_attempt, wait_exponential
 
 from app.config import Settings
 from app.runner import RunTranscript
@@ -75,7 +77,24 @@ def main(argv: list[str] | None = None) -> None:
     )
     try:
         with production_task() as answer_question:
-            report = dataset.evaluate_sync(answer_question)
+            # Unbounded concurrency previously caused 46-50% of wikipedia_answer_quality's 50
+            # live cases to fail outright, overwhelming Wikipedia's rate limiter and
+            # the agent's own tool-retry budget; max_concurrency=5 keeps concurrent
+            # Wikipedia/Anthropic load modest. retry_task and retry_evaluators (same
+            # backoff config) retry a failed case's task or LLMJudge calls
+            # individually with exponential backoff, rather than losing the whole
+            # case to one transient failure.
+            retry_config = RetryConfig(
+                stop=stop_after_attempt(3),
+                wait=wait_exponential(multiplier=1, max=20),
+                reraise=True,
+            )
+            report = dataset.evaluate_sync(
+                answer_question,
+                max_concurrency=5,
+                retry_task=retry_config,
+                retry_evaluators=retry_config,
+            )
     except ValidationError:
         print(
             "Error: ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key.",

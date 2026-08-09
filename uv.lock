@@ -161,6 +161,7 @@ dependencies = [
     { name = "pydantic-ai" },
     { name = "pydantic-evals" },
     { name = "pydantic-settings" },
+    { name = "tenacity" },
 ]
 
 [package.dev-dependencies]
@@ -178,6 +179,7 @@ requires-dist = [
     { name = "pydantic-ai", specifier = ">=2.27.0" },
     { name = "pydantic-evals", specifier = ">=2.27.0" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
+    { name = "tenacity", specifier = ">=9.1.4" },
 ]
 
 [package.metadata.requires-dev]

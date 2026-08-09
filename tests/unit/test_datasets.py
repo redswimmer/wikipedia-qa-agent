@@ -6,6 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 from pydantic_evals import Dataset
+from pydantic_evals.evaluators import LLMJudge
 
 from app.runner import RunTranscript
 from evaluations.evaluators import CUSTOM_EVALUATOR_TYPES
@@ -60,3 +61,26 @@ def test_refusal_dataset_loads():
         "implicit": 4,
         "question": 3,
     }
+
+
+def test_wikipedia_answer_quality_dataset_loads():
+    dataset = Dataset[str, RunTranscript, HotpotQAMetadata].from_file(
+        Path("evaluations/datasets/wikipedia_answer_quality.yaml")
+    )
+
+    assert len(dataset.cases) == 50
+    assert len({case.name for case in dataset.cases}) == 50
+
+    for case in dataset.cases:
+        assert case.metadata is not None
+        assert case.metadata.level == "hard"
+        assert isinstance(case.expected_output, RunTranscript)
+        assert case.expected_output.answer != ""
+
+    assert len(dataset.evaluators) == 6
+    judge_names = {
+        e.assertion.get("evaluation_name")
+        for e in dataset.evaluators
+        if isinstance(e, LLMJudge) and e.assertion
+    }
+    assert judge_names == {"safety", "faithfulness", "relevance", "correctness"}

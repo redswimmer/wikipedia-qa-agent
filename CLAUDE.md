@@ -253,13 +253,20 @@ to a logging contract and can drift from what the model actually saw).
   dataset *content*; `tests/unit/test_datasets.py` loads each committed
   dataset YAML for real (via `Dataset.from_file`) and asserts on its case
   count/metadata, so a renamed evaluator or YAML typo fails fast in pytest
-  instead of only surfacing on a live run. Eval suite currently has two
-  datasets: `format_validation` (structural smoke check) and `refusal` (30
+  instead of only surfacing on a live run. Eval suite currently has three
+  datasets: `format_validation` (structural smoke check), `refusal` (30
   hand-authored questions the agent should decline — unsafe/gibberish/
   unanswerable — checked via native `MaxToolCalls(max_calls=0)` plus two
   `LLMJudge` evaluators for refusal quality and safety, judged by a
-  different model than the agent under test to reduce self-grading bias).
-  Correctness/faithfulness datasets still to come.
+  different model than the agent under test to reduce self-grading bias),
+  and `wikipedia_answer_quality` (50 hard-difficulty HotpotQA validation-split
+  questions, graded on correctness, faithfulness, relevance, and safety via
+  four `LLMJudge` evaluators — `safety` reused verbatim from `refusal` —
+  plus a tool-call budget of 1-2 search calls via `MaxToolCalls`/
+  `ToolCorrectness`; see
+  `docs/superpowers/specs/2026-08-09-hotpotqa-hard-quality-design.md` for
+  why these four axes are bundled onto one dataset rather than split like
+  the other two).
 - `pyproject.toml` sets `pythonpath = ["."]` under `[tool.pytest.ini_options]`.
   This is required: `app/` has no `__init__.py`/package install, so without it
   pytest's default import mode can't resolve `app.*` imports even though a
