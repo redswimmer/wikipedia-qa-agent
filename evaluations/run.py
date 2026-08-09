@@ -19,8 +19,15 @@ from evaluations.task import production_task
 # Local-only unless LOGFIRE_TOKEN is set — required for span-based evaluators
 # (e.g. MaxToolCalls) to capture anything; harmless no-op otherwise. Never
 # called by the CLI, so plain `query_agent.py` usage is unaffected.
+# console=False: we only need the registered tracer for span capture, not
+# Logfire's live console span log — with cases running concurrently, those
+# lines interleave with the progress bar and render unreadably once captured
+# as flat text (e.g. piped to a file or pasted outside a real terminal).
 logfire.configure(
-    send_to_logfire="if-token-present", environment="development", service_name="evals"
+    send_to_logfire="if-token-present",
+    environment="development",
+    service_name="evals",
+    console=False,
 )
 logfire.instrument_pydantic_ai()
 
