@@ -36,8 +36,9 @@ unseen input shaped differently.
 
 ## 2. Eval suite design: dimensions measured, and why
 
-Two dimensions so far, each its own dataset, deliberately narrow rather
-than one combined "is this a good answer" rubric:
+Three datasets so far — the first two deliberately narrow (one dimension
+each), the third bundling four related quality axes onto one shared set of
+live runs (see below):
 
 **Format validity** — before grading whether an answer is *good*, confirm
 the system produces one at all: a real answer, a real record of what was
@@ -54,6 +55,25 @@ axes: *why* the question shouldn't be answered (unsafe / gibberish /
 unanswerable in principle) and *how* it's phrased (a direct question reads
 very differently from a colloquial or implicit one) — testing whether
 refusal holds up beyond the cleanest, most obvious phrasing.
+
+**Answer quality (correctness, faithfulness, relevance, safety)** — the
+first dataset that grades whether an answer is actually *good*, not just
+present (`format_validation`) or appropriately declined (`refusal`). Four
+`LLMJudge` axes over the same 50 hard, multi-hop HotpotQA questions:
+correctness (does the answer match the known gold answer, judged
+semantically), faithfulness (is every claim grounded in what
+`search_wikipedia` actually retrieved, not fabricated), relevance (does
+the answer address the specific question asked), and safety (reused
+verbatim from `refusal`'s rubric, as a defense-in-depth check on ordinary
+QA output). Unlike the first two datasets, these four axes are bundled
+onto one dataset rather than split one-per-file — they all grade the same
+50 live agent runs, so splitting them would mean re-running the same
+expensive live API + Wikipedia calls four times for no additional signal.
+Paired with a tool-call budget (`MaxToolCalls(max_calls=2)` as a ceiling,
+`ToolCorrectness` as a floor requiring at least one `search_wikipedia`
+call) — hard HotpotQA questions are multi-hop by design, so this checks
+that the agent neither answers from parametric memory (zero searches) nor
+flails (more than two).
 
 A few choices worth naming: judging is done by a different, more capable
 model than the one being tested, to reduce self-grading bias. Refusal
@@ -78,6 +98,17 @@ prompts with an LLM judge, worth knowing rather than hiding. It didn't
 recur on the second run, but a single run isn't enough to call it resolved
 either way — LLM judges (and, per below, the underlying API's content
 filtering) aren't perfectly deterministic.
+
+**hotpotqa_hard**: the first live run surfaced an eval-*infrastructure*
+finding rather than an agent-quality one — `evaluations/run.py`'s
+`evaluate_sync()` call had no `max_concurrency` cap, so all 50 cases fired
+simultaneously and 46-50% failed outright (connection errors, tool-retry
+exhaustion) from overwhelming Wikipedia's rate limiter, not from any actual
+agent mistake. Fixed by capping concurrency and adding task-level retry
+(both native `pydantic_evals`/`pydantic_ai` mechanisms — see
+`evaluations/run.py`); every case that did complete before the fix graded
+correctly across all six evaluator columns, confirming this was a load
+problem, not a correctness one.
 
 **Everything else was handled cleanly from the start** — all unanswerable
 cases and most unsafe cases scored full marks, including one response that

@@ -49,6 +49,7 @@ dimensions so far:
 ```bash
 uv run python -m evaluations.run format_validation
 uv run python -m evaluations.run refusal
+uv run python -m evaluations.run hotpotqa_hard
 ```
 
 - **Format validation** — does the agent produce a real answer with a real
