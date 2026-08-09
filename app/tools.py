@@ -9,8 +9,8 @@ MEDIAWIKI_API_URL = "https://en.wikipedia.org/w/api.php"
 # https://meta.wikimedia.org/wiki/User-Agent_policy. Every httpx.Client used to
 # call search_wikipedia must set this header.
 WIKIPEDIA_USER_AGENT = (
-    "anthropic-take-home-wikipedia-agent/0.1 "
-    "(https://github.com/redswimmer/anthropic-take-home-assignment; andrew@redswimmer.com)"
+    "wikipedia-qa-agent/0.1 "
+    "(https://github.com/redswimmer/wikipedia-qa-agent; andrew@redswimmer.com)"
 )
 
 
