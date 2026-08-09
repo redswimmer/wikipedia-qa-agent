@@ -41,26 +41,24 @@ exactly what the agent looked up before answering, not just the answer itself.
 
 ## Evals
 
-The eval suite (assignment deliverable #3) grades the agent against two
-datasets so far:
+The eval suite (assignment deliverable #3) grades the agent along two
+dimensions so far:
 
 ```bash
-uv run python -m evaluations.run format_validation  # output is well-formed
-uv run python -m evaluations.run refusal             # correctly declines what it should
+uv run python -m evaluations.run format_validation
+uv run python -m evaluations.run refusal
 ```
 
-- **`format_validation`** — a small, hand-picked set of Wikipedia-grounded
-  questions from [HotpotQA](https://huggingface.co/datasets/hotpotqa/hotpot_qa)
-  (Yang et al., 2018 — see `docs/hotpotqa_1809.09600v1.md`), spanning
-  easy/medium/hard difficulty. Checks the agent's output is well-formed (a
-  real answer, well-formed tool-call records).
-- **`refusal`** — 30 hand-authored questions the agent should decline to
-  answer because no Wikipedia search can resolve them: unsafe requests,
-  gibberish, and questions unanswerable in principle (personal to the user,
-  or unknowable). Checks the agent makes zero tool calls and that its
-  refusal is polite, clear, and safe.
+- **Format validation** — does the agent produce a real answer with a real
+  audit trail? The baseline sanity check, before grading answer quality at
+  all.
+- **Refusal** — does the agent correctly decline questions Wikipedia search
+  can't help with (unsafe requests, gibberish, or things unanswerable in
+  principle), instead of guessing or searching for nonsense?
 
-Correctness and faithfulness grading come next.
+Correctness and faithfulness grading come next. See
+`docs/design_rationale.md` for what each eval measures and why, and what
+we've learned so far.
 
 No new setup beyond the Quickstart above: running an already-built dataset
 needs the same API key and network access as the CLI, nothing more.
