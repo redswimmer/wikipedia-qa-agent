@@ -32,7 +32,7 @@ uv run pytest tests/unit/test_app_imports.py::test_app_modules_import  # single 
 uv run pre-commit run --all-files  # run every quality gate without committing
 
 uv run python -m app.query_agent "your question"  # ask a question
-uv run python -m evaluations.run format_validation  # run an eval dataset (hits real API + Wikipedia)
+uv run python -m evaluations.run wikipedia_answer_quality  # run an eval dataset (hits real API + Wikipedia)
 ```
 
 Every commit runs ruff (lint + format), `ty`, and pytest via pre-commit; the
@@ -196,13 +196,13 @@ to a logging contract and can drift from what the model actually saw).
   `level`/`type`/`hotpotqa_id`; `RefusalMetadata`: `category`/`phrasing`;
   purpose-specific grading data, e.g. a future correctness dataset's
   expected answer, lives next to the evaluator that reads it, not here —
-  keeps this file's reason to change singular). `evaluators.py`
-  (`Evaluator` subclasses + `CUSTOM_EVALUATOR_TYPES`; grows by addition as
-  new eval purposes are added — split into multiple files only if it gets
-  large enough to violate "one clear responsibility", not preemptively;
-  prefer a native `pydantic_evals` evaluator over a custom one whenever one
-  exists — see the `refusal` dataset below, which needs zero custom
-  evaluator classes). `task.py` (`production_task()`: the one production
+  keeps this file's reason to change singular). Both current datasets grade
+  entirely with native `pydantic_evals` evaluators (`MaxToolCalls`,
+  `ToolCorrectness`, `LLMJudge`) — no custom `Evaluator` subclass exists in
+  the repo, by design: prefer a native evaluator over a hand-rolled one
+  whenever one exists, and only add a custom class (in a new
+  `evaluators.py`) when a dataset's check genuinely can't be expressed
+  natively. `task.py` (`production_task()`: the one production
   entrypoint every dataset's cases run through — wraps
   `app.bootstrap.resolve_real_model()` + `app.tools.build_wikipedia_client()` +
   `app.runner.run_agent()`; reused unchanged across every dataset). `run.py`
@@ -212,22 +212,19 @@ to a logging contract and can drift from what the model actually saw).
   deliberately loose on the metadata type, since each dataset defines its
   own metadata model and the runner never reads metadata fields itself).
   `datasets/*.yaml` — one file per eval purpose; cases *and* their
-  evaluator(s) are serialized together via
-  `Dataset.to_file(custom_evaluator_types=...)`, so the YAML is
-  self-describing, with an auto-generated `*_schema.json` sibling for IDE
-  autocomplete. Depends only on `app/*`, never `app/query_agent.py` — same
-  rule as `query_agent.py` itself.
+  evaluator(s) are serialized together via `Dataset.to_file(...)`, so the
+  YAML is self-describing, with an auto-generated `*_schema.json` sibling
+  for IDE autocomplete. Depends only on `app/*`, never `app/query_agent.py`
+  — same rule as `query_agent.py` itself.
 - OpenTelemetry/Logfire: `app/agent.py` sets `agent.instrument = True` on
   the shared `agent` object (harmless without a configured tracer — spans
   go to a no-op provider; only `evaluations/run.py` actually configures one,
   locally-only via `logfire.configure(send_to_logfire="if-token-present",
   ...)`, so plain `query_agent.py` CLI usage is unaffected). This exists so
-  span-based native evaluators (e.g. `MaxToolCalls`) work — deliberately
-  *not* used for the `format_validation` dataset's structural checks, which
-  read `RunTranscript` directly instead (no OTel needed there), but *is*
-  the right tool for asserting tool-call counts/identity, matching
-  `pydantic_evals`' own documented pattern for that kind of check. Note:
-  `LLMJudge`'s `model` field always round-trips through a committed YAML as
+  span-based native evaluators (e.g. `MaxToolCalls`, `ToolCorrectness`)
+  work — both datasets rely on these for tool-call counts/identity,
+  matching `pydantic_evals`' own documented pattern for that kind of check.
+  Note: `LLMJudge`'s `model` field always round-trips through a committed YAML as
   a plain model string (pydantic_evals serializes any `Model` instance back
   to its `model_id`), so it resolves via `ANTHROPIC_API_KEY` in the process
   environment at evaluate-time, not through this project's `Settings`/`.env`
@@ -237,7 +234,7 @@ to a logging contract and can drift from what the model actually saw).
   manually (`uv run python -m evaluations.run <dataset_name>`), never by
   pytest/pre-commit/CI. Code quality on `evaluations/*.py` is *not*
   excluded: ruff/ty run repo-wide with no path exclusions, and
-  `TranscriptWellFormed`'s pure logic has a normal pytest unit test — only
+  `tests/unit/test_datasets.py` loads every dataset YAML for real — only
   the live agent execution itself stays manual.
 - HotpotQA-sourced datasets: no build script is committed — sourcing is
   one-off curation work (see `docs/superpowers/specs/2026-08-09-pydantic-evals-hotpotqa-design.md`
@@ -253,10 +250,10 @@ to a logging contract and can drift from what the model actually saw).
   dataset *content*; `tests/unit/test_datasets.py` loads each committed
   dataset YAML for real (via `Dataset.from_file`) and asserts on its case
   count/metadata, so a renamed evaluator or YAML typo fails fast in pytest
-  instead of only surfacing on a live run. Eval suite currently has three
-  datasets: `format_validation` (structural smoke check), `refusal` (30
+  instead of only surfacing on a live run. The eval suite has two datasets,
+  covering the two halves of correct behavior: `refusal` (50
   hand-authored questions the agent should decline — unsafe/gibberish/
-  unanswerable — checked via native `MaxToolCalls(max_calls=0)` plus two
+  unanswerable, 17/17/16 — checked via native `MaxToolCalls(max_calls=0)` plus two
   `LLMJudge` evaluators for refusal quality and safety, judged by a
   different model than the agent under test to reduce self-grading bias),
   and `wikipedia_answer_quality` (50 hard-difficulty HotpotQA validation-split

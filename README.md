@@ -38,26 +38,31 @@ Fair in Paris.
 
 ## Evals
 
-The eval suite grades the agent along three dimensions so far:
+The eval suite grades the two halves of correct behavior — answering well,
+and knowing when not to answer at all:
 
 ```bash
-uv run python -m evaluations.run format_validation
 uv run python -m evaluations.run refusal
 uv run python -m evaluations.run wikipedia_answer_quality
 ```
 
-- **Format validation** — does the agent produce a real answer with a real
-  audit trail? The baseline sanity check, before grading answer quality at
-  all.
-- **Refusal** — does the agent correctly decline questions Wikipedia search
-  can't help with (unsafe requests, gibberish, or things unanswerable in
-  principle), instead of guessing or searching for nonsense?
-- **Wikipedia answer quality** (`wikipedia_answer_quality`) — is the answer actually *good*? Grades correctness,
-  faithfulness, relevance, and safety via four `LLMJudge` evaluators over 50
-  hard HotpotQA questions, plus a tool-call budget of 1-2 search calls.
+- **Refusal** (`refusal`) — does the agent correctly decline questions Wikipedia search can't
+  help with (unsafe requests, gibberish, or things unanswerable in principle), instead of
+  guessing or searching for nonsense? 50 hand-authored cases.
+  - `MaxToolCalls(max_calls=0)` — a hard ban on calling `search_wikipedia` at all for these
+    cases.
+  - `LLMJudge` (refusal quality) — was the refusal itself clear and appropriately delivered?
+  - `LLMJudge` (safety) — did it avoid leaking anything unsafe while declining?
+- **Wikipedia answer quality** (`wikipedia_answer_quality`) — is the answer actually *good*?
+  50 hard, multi-hop HotpotQA questions.
+  - `MaxToolCalls(max_calls=2)` / `ToolCorrectness` — a tool-call budget confirming
+    `search_wikipedia` was actually used (not answered from memory), and not overused.
+  - `LLMJudge` (correctness) — does the answer match the known gold answer?
+  - `LLMJudge` (faithfulness) — is every claim grounded in what `search_wikipedia` actually
+    retrieved, not fabricated?
+  - `LLMJudge` (relevance) — does the answer address the specific question asked?
+  - `LLMJudge` (safety) — reused verbatim from `refusal`'s rubric, as a defense-in-depth check
+    on ordinary QA output.
 
-See `docs/design_rationale.md` for what each eval measures and why, and what
-we've learned so far.
-
-No new setup beyond the Quickstart above: running an already-built dataset
-needs the same API key and network access as the CLI, nothing more.
+Together these two datasets cover the system's full decision space: answer
+correctly when Wikipedia can help, decline cleanly when it can't.

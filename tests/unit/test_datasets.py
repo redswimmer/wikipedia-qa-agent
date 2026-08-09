@@ -9,20 +9,7 @@ from pydantic_evals import Dataset
 from pydantic_evals.evaluators import LLMJudge
 
 from app.runner import RunTranscript
-from evaluations.evaluators import CUSTOM_EVALUATOR_TYPES
 from evaluations.models import HotpotQAMetadata, RefusalMetadata
-
-
-def test_format_validation_dataset_loads():
-    dataset = Dataset[str, RunTranscript, HotpotQAMetadata].from_file(
-        Path("evaluations/datasets/format_validation.yaml"),
-        custom_evaluator_types=CUSTOM_EVALUATOR_TYPES,
-    )
-    levels = []
-    for case in dataset.cases:
-        assert case.metadata is not None
-        levels.append(case.metadata.level)
-    assert levels == ["easy", "medium", "hard"]
 
 
 def test_refusal_dataset_loads():

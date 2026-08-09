@@ -48,13 +48,32 @@ skip it.
 
 ## 2. Eval suite design: dimensions measured, and why
 
-Three datasets so far — the first two deliberately narrow (one dimension
-each), the third bundling four related quality axes onto one shared set of
-live runs (see below):
+Two datasets, each targeting one half of the system's full decision space:
+does it produce a good answer when Wikipedia search can actually help, and
+does it decline cleanly when the question isn't Wikipedia's to answer.
+Between them, every question the system can face is covered by one or the
+other — there's no third category of input left unmeasured.
 
-**Format validity** — before grading whether an answer is *good*, confirm
-the system produces one at all: a real answer, a real record of what was
-searched. The cheapest possible signal that the system works end-to-end.
+**Answer quality (correctness, faithfulness, relevance, safety)**
+(`wikipedia_answer_quality`) — grades whether an answer is actually *good*:
+not just present, but correct, grounded, on-topic, and safe. Four
+`LLMJudge` axes over 50 hard, multi-hop HotpotQA questions: correctness
+(does the answer match the known gold answer, judged semantically),
+faithfulness (is every claim grounded in what `search_wikipedia` actually
+retrieved, not fabricated), relevance (does the answer address the specific
+question asked), and safety (reused verbatim from `refusal`'s rubric, as a
+defense-in-depth check on ordinary QA output). The four axes are bundled
+onto one dataset rather than split one-per-file — they all grade the same
+50 live agent runs, so splitting them would mean re-running the same
+expensive live API + Wikipedia calls four times for no additional signal.
+Paired with a tool-call budget (`MaxToolCalls(max_calls=2)` as a ceiling,
+`ToolCorrectness` as a floor requiring at least one `search_wikipedia`
+call) — hard HotpotQA questions are multi-hop by design, so this checks
+that the agent neither answers from parametric memory (zero searches) nor
+flails (more than two). That floor also means a run producing no search
+and no real answer fails outright here, so a separate "did it produce
+*anything*" check would be redundant with what this dataset already
+enforces as a side effect of grading something more useful.
 
 **Refusal correctness** — the system has a genuine scope boundary: not
 every question is Wikipedia's to answer. A system that always searches and
@@ -68,37 +87,23 @@ unanswerable in principle) and *how* it's phrased (a direct question reads
 very differently from a colloquial or implicit one) — testing whether
 refusal holds up beyond the cleanest, most obvious phrasing.
 
-**Answer quality (correctness, faithfulness, relevance, safety)**
-(`wikipedia_answer_quality`) — the first dataset that grades whether an
-answer is actually *good*, not just present (`format_validation`) or
-appropriately declined (`refusal`). Four
-`LLMJudge` axes over the same 50 hard, multi-hop HotpotQA questions:
-correctness (does the answer match the known gold answer, judged
-semantically), faithfulness (is every claim grounded in what
-`search_wikipedia` actually retrieved, not fabricated), relevance (does
-the answer address the specific question asked), and safety (reused
-verbatim from `refusal`'s rubric, as a defense-in-depth check on ordinary
-QA output). Unlike the first two datasets, these four axes are bundled
-onto one dataset rather than split one-per-file — they all grade the same
-50 live agent runs, so splitting them would mean re-running the same
-expensive live API + Wikipedia calls four times for no additional signal.
-Paired with a tool-call budget (`MaxToolCalls(max_calls=2)` as a ceiling,
-`ToolCorrectness` as a floor requiring at least one `search_wikipedia`
-call) — hard HotpotQA questions are multi-hop by design, so this checks
-that the agent neither answers from parametric memory (zero searches) nor
-flails (more than two).
-
 A few choices worth naming: judging is done by a different, more capable
 model than the one being tested, to reduce self-grading bias. Refusal
 quality and safety are graded separately, so a report can distinguish
 "refused, but rudely" from "refused politely, but leaked something unsafe"
 — different problems needing different fixes.
 
-## 3. Where the system succeeds and fails — what we learned from evals
+*(Note on suite history: an earlier third dataset, `format_validation`,
+checked only that the system produced some answer and some tool-call
+record, on 3 HotpotQA cases — a cheap early sanity check written before
+`wikipedia_answer_quality` existed. It was retired once
+`wikipedia_answer_quality`'s `ToolCorrectness`/`MaxToolCalls` pair and four
+judges started enforcing the same structural guarantee strictly, across 50
+cases instead of 3, as a side effect of grading something more useful. The
+two datasets above are the intended, complete design — not a stopgap
+pending a third.)*
 
-**Format validation**: 100% pass across both live runs (before and after
-the prompt change in Section 4), confirming the basic pipeline works
-end-to-end and that the change didn't regress ordinary Q&A behavior.
+## 3. Where the system succeeds and fails — what we learned from evals
 
 **Refusal** (30 cases), first run: 97.5% average, with two findings — a
 weak spot in one specific category (detailed in Section 4, since it's now
@@ -185,10 +190,13 @@ judge rubrics were also tightened — explicit pass/fail definitions plus a
 few illustrative examples apiece, distinct from any of our actual 30 test
 questions so the judge isn't calibrated on the same cases it grades.
 
-**After:** re-ran both datasets. Format validation stayed 100% pass
-(no regression to ordinary behavior). Every case in the previously-weak
-category passed cleanly, and the run that previously crashed completed
-normally — 30/30 cases finished this time, versus 29/30 before.
+**After:** re-ran the eval suite active at the time (`format_validation`,
+`refusal`). Format validation stayed 100% pass (no regression to ordinary
+behavior) — that dataset was later retired once `wikipedia_answer_quality`
+made the same structural check redundant, see Section 2. Every case in the
+previously-weak refusal category passed cleanly, and the run that
+previously crashed completed normally — 30/30 cases finished this time,
+versus 29/30 before.
 
 Still open: whether a search retry budget being exhausted should be a hard
 crash at all, versus a graceful decline; and how to handle prompts
@@ -218,10 +226,11 @@ you've searched, answer directly and concisely, in your own words" (same
 tone guidance, but only after the tool call, not instead of it).
 
 **After:** re-ran the same three trivia questions through unmodified
-`run_agent()` — all three now produce exactly one tool call. Full eval
-suite (`format_validation`, `refusal`) not yet re-run against this change;
-worth doing before trusting it broadly, since the reworded closing
-guideline touches phrasing that could interact with refusal quality.
+`run_agent()` — all three now produce exactly one tool call. The eval
+suite active at the time (`format_validation`, `refusal`) had not yet been
+re-run against this change; worth doing before trusting it broadly, since
+the reworded closing guideline touches phrasing that could interact with
+refusal quality.
 
 This gap only surfaced from manually trying questions outside the eval
 suite's existing cases — the format_validation dataset's cases are all

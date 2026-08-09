@@ -15,7 +15,6 @@ from tenacity import stop_after_attempt, wait_exponential
 
 from app.config import Settings
 from app.runner import RunTranscript
-from evaluations.evaluators import CUSTOM_EVALUATOR_TYPES
 from evaluations.task import production_task
 
 # Local-only unless LOGFIRE_TOKEN is set — required for span-based evaluators
@@ -72,9 +71,7 @@ def main(argv: list[str] | None = None) -> None:
     # Metadata type intentionally loose here: each dataset defines its own metadata
     # model (see evaluations/models.py) and nothing in this generic runner reads
     # metadata fields, so it doesn't need to know which shape a given dataset uses.
-    dataset = Dataset[str, RunTranscript, Any].from_file(
-        dataset_path, custom_evaluator_types=CUSTOM_EVALUATOR_TYPES
-    )
+    dataset = Dataset[str, RunTranscript, Any].from_file(dataset_path)
     try:
         with production_task() as answer_question:
             # Unbounded concurrency previously caused 46-50% of wikipedia_answer_quality's 50
