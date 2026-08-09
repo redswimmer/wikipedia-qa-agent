@@ -907,11 +907,9 @@ evaluators:
       include_reason: true
       evaluation_name: relevance
 - LLMJudge:
-    rubric: 'Note: ExpectedOutput is a JSON object wrapping the gold answer (e.g.
-      {"question": ..., "tool_calls": [], "answer": ...}) -- only its `answer` field
-      is the expected answer; its `tool_calls: []` is a serialization placeholder
-      from an unrelated type constraint, not an expectation about how many searches
-      should have happened.
+    rubric: 'Note: only ExpectedOutput''s `answer` field is the gold answer -- ignore
+      its `question` and `tool_calls` fields, which are unused placeholders and carry
+      no grading signal.
 
 
       Task: evaluate whether the response''s final answer is semantically equivalent
