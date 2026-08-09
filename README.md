@@ -38,8 +38,7 @@ Fair in Paris.
 
 ## Evals
 
-The eval suite (assignment deliverable #3) grades the agent along two
-dimensions so far:
+The eval suite grades the agent along two dimensions so far:
 
 ```bash
 uv run python -m evaluations.run format_validation
