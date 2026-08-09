@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[oc]
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv
+
+# uv
+uv-cache/
+
+# Tooling caches
+.ruff_cache/
+.pytest_cache/
+.cache/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
