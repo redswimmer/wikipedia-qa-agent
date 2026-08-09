@@ -21,7 +21,7 @@ from app.bootstrap import resolve_real_model
 from app.runner import run_agent_streaming
 from app.tools import build_wikipedia_client
 
-_DIM = "\033[2m"
+_YELLOW = "\033[33m"
 _BOLD_CYAN = "\033[1;36m"
 _RESET = "\033[0m"
 
@@ -65,10 +65,10 @@ async def _print_progress(ctx: RunContext, events: AsyncIterable[AgentStreamEven
         parts = _progress_parts(event)
         if parts is not None:
             if not tool_calls_started:
-                print(_colorize("Tool calls:", _DIM, enabled=stderr_color), file=sys.stderr)
+                print(_colorize("Tool calls:", _YELLOW, enabled=stderr_color), file=sys.stderr)
                 tool_calls_started = True
             arrow, rest = parts
-            print(f"  {_colorize(arrow, _DIM, enabled=stderr_color)} {rest}", file=sys.stderr)
+            print(f"  {_colorize(arrow, _YELLOW, enabled=stderr_color)} {rest}", file=sys.stderr)
 
 
 def main(
