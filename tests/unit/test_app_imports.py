@@ -4,5 +4,12 @@ import importlib
 
 
 def test_app_modules_import():
-    for module in ("app.agent", "app.prompts", "app.tools"):
+    for module in (
+        "app.config",
+        "app.tools",
+        "app.prompts",
+        "app.agent",
+        "app.runner",
+        "app.query_agent",
+    ):
         importlib.import_module(module)
