@@ -82,7 +82,12 @@ def main(argv: list[str] | None = None) -> None:
             file=sys.stderr,
         )
         sys.exit(1)
-    report.print(include_reasons=True)
+    report.print(
+        include_input=True,
+        include_output=True,
+        output_config={"value_formatter": "{0.answer}"},
+        include_reasons=True,
+    )
 
 
 if __name__ == "__main__":
