@@ -11,9 +11,6 @@ agent: Agent[httpx.Client, str] = Agent(
     instructions=SYSTEM_PROMPT,
     deps_type=httpx.Client,
     tools=[search_wikipedia],
-    # Default of 1 was too tight for a lookup tool: a single bad query (wrong
-    # title match, disambiguation page) shouldn't abort the whole run before
-    # the model gets a couple of chances to refine its search.
     retries=3,
 )
 # Emits OpenTelemetry spans for agent runs and tool calls. Harmless without
