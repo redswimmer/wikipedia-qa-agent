@@ -19,27 +19,24 @@ cp .env.example .env
 uv run python -m app.query_agent "In what year was the Eiffel Tower completed?"
 ```
 
-Example Response:
+Example Response (streams live — tool calls to stderr, answer to stdout):
 
 ```
-Question: In what year was the Eiffel Tower completed?
-
 Tool calls:
-  1. search_wikipedia(query='Eiffel Tower')
-     → The Eiffel Tower (  EYE-fəl; French: Tour Eiffel [tuʁ ɛfɛl] ) is a lattice
-       tower on the Champ de Mars in Paris, France. It is named after the
-       engineer Gustave Eiffel, whose company designed and built the tower from
-       1887 to 1889. Locally nicknamed "La dame de fer" (French for "Iron
-       Lady")...
-       [...]
+  → search_wikipedia(query='Eiffel Tower')
+  ← The Eiffel Tower (  EYE-fəl; French: Tour Eiffel [tuʁ ɛfɛl] ) is a lattice
+    tower on the Champ de Mars in Paris, France. It is named after the
+    engineer Gustave Eiffel, whose company designed and built the tower
+    from 1887 to 1889...
+    [truncated for length]
 
 Answer:
-The Eiffel Tower was completed in 1889.
+The Eiffel Tower was completed in 1889, having been built by Gustave
+Eiffel's company from 1887 to 1889 as the centerpiece of the 1889 World's
+Fair in Paris.
 ```
 
-The output always shows three things: the question, every Wikipedia search the
-agent ran (its query and what it found), and the final answer — so you can see
-exactly what the agent looked up before answering, not just the answer itself.
+`2>/dev/null` gets you just the answer.
 
 ## Evals
 
