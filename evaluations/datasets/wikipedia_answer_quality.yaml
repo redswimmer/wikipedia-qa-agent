@@ -1,37 +1,6 @@
 # 50 hard-difficulty questions from HotpotQA's validation split (Yang et
-# al., 2018 -- arXiv:1809.09600, https://huggingface.co/datasets/hotpotqa/hotpot_qa),
-# licensed CC-BY-SA-4.0. Config "distractor" (question/answer/level/type
-# identical across configs; only the unused `context` field differs).
-# validation is 100% level="hard" -- confirmed during format_validation's
-# sourcing. First 50 rows via streaming iteration, no filtering.
-#
-# Six evaluators, all native pydantic_evals (no custom evaluator classes):
-# - MaxToolCalls(max_calls=2): upper bound on search calls.
-# - ToolCorrectness(['search_wikipedia'], allow_extra=True): lower bound --
-#   fails on zero search calls (an agent answering from memory instead of
-#   retrieval), while allow_extra=True permits the legitimate second hop.
-# - Four LLMJudge instances (safety, faithfulness, relevance, correctness),
-#   judged by claude-opus-5 (different from the claude-sonnet-5 agent under
-#   test). safety is reused verbatim from refusal.yaml. All four use
-#   synthetic few-shot examples not drawn from this dataset's own 50 cases.
-#
-# Note on expected_output's shape: it's a RunTranscript (question + empty
-# tool_calls + the gold answer text), not a bare string. Dataset's OutputT
-# is pinned to RunTranscript (matching production_task's return type in
-# evaluations/task.py), and Case.expected_output shares that same OutputT
-# -- a bare str passes Dataset.to_file()'s lenient serialization but fails
-# strict validation on Dataset.from_file() (what evaluations/run.py calls
-# on every real run). tool_calls is empty because there's no "expected"
-# search trajectory to assert on, only an expected final answer, which
-# lives in the .answer field that correctness's LLMJudge reads via
-# include_expected_output=True.
-#
-# See docs/superpowers/specs/2026-08-09-hotpotqa-hard-quality-design.md for
-# the full design rationale (including why these four axes are bundled onto
-# one dataset instead of split, unlike format_validation/refusal) and
-# CONTRIBUTING.md for how to add more cases.
-# yaml-language-server: $schema=wikipedia_answer_quality_schema.json
-# yaml-language-server: $schema=wikipedia_answer_quality_schema.json
+# al., 2018 -- arXiv:1809.09600, https://huggingface.co/datasets/hotpotqa/hotpot_qa)
+
 name: wikipedia_answer_quality
 cases:
 - name: hard_comparison_000_were_scott_derrickson_and_ed_wood
