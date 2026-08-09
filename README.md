@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/redswimmer/wikipedia-qa-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/redswimmer/wikipedia-qa-agent/actions/workflows/ci.yml)
 
-A question-answering system powered by Claude with a `search_wikipedia` tool. Ask
+A question-answering agent powered by Claude with a `search_wikipedia` tool. Ask
 it a question; it decides whether Wikipedia search is needed, looks things up if
 so, and answers — telling you whether search was used.
 
