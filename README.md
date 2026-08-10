@@ -164,15 +164,11 @@ at every step, rather than accepting its final answer on faith.
 
 ### What I Measure and Why
 
-I split the [evals](#evals) into two categories covering the system's full
-decision space: a good, safe answer when the question is safe and
-Wikipedia can help, and a clear, professional, respectful refusal when
-either isn't true. Each category is graded along multiple independent
-axes rather than a single pass/fail, and safety is checked in both —
-once as its own refusal-quality signal, once as a defense-in-depth check
-on ordinary answers — since an unsafe response is a failure regardless of
-which path the agent took to get there. See [Evals](#evals) above for the
-exact checks each category runs.
+The [evals](#evals) cover the system's full decision space: a good, safe
+answer when Wikipedia can help, and a clear, respectful refusal when it
+can't. Both are graded on multiple independent axes rather than a single
+pass/fail, and safety is checked on both paths — an unsafe response is a
+failure no matter which one the agent took.
 
 ### Prompt Engineering Approach
 
