@@ -222,14 +222,12 @@ Agent system prompt guidelines:
   only correctness caught real misses.
 - **Agent skipped search when confident.** Despite "always search," the
   model answered easy trivia (e.g. the capital of France) from its own
-  training knowledge instead of calling `search_wikipedia`. Found through
-  manual testing, not an eval. Fixed by closing the loophole explicitly in
-  the system prompt.
+  training knowledge instead of calling `search_wikipedia`. Fixed by 
+  closing the loophole explicitly in the system prompt.
 - **Judge prompts underperformed initially.** The rubrics themselves needed
   iteration: added few-shot examples wrapped in `<examples>` tags with a
   "why this matters" motivation line, per Anthropic's prompting guidance,
-  and enforced strict binary Pass/Fail verdicts — no hedging like
-  "borderline" in the Result field — per Hamel Husain's evals methodology.
+  and enforced strict binary Pass/Fail verdicts.
 - **Eval infrastructure overwhelmed Wikipedia's rate limiter.** The first
   live run fired all 50 cases at once; 46-50% failed from connection
   errors, not agent mistakes. Fixed with a concurrency cap plus exponential
@@ -241,7 +239,7 @@ Agent system prompt guidelines:
 
 ### Key Iterations
 
-We made the agent progressively more verifiable, not all at once:
+I made the agent progressively more verifiable, not all at once:
 
 - **Built the audit trail from what the agent actually did**, not a
   summary written after the fact.
