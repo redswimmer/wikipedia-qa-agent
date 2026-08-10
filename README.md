@@ -2,9 +2,11 @@
 
 [![CI](https://github.com/redswimmer/wikipedia-qa-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/redswimmer/wikipedia-qa-agent/actions/workflows/ci.yml)
 
-A question-answering agent powered by Claude with a `search_wikipedia` tool. Ask
-it a question; it decides whether Wikipedia search is needed, looks things up if
-so, and answers — telling you whether search was used.
+A question-answering agent powered by Claude with a `search_wikipedia` tool. It
+decides whether Wikipedia search is needed, looks things up if so, and answers
+— telling you whether search was used. Safety is a first-class behavior:
+unsafe or unanswerable questions are refused, and both answers and refusals
+are checked by a dedicated eval suite (see [Evals](#evals)).
 
 ## Quickstart
 
@@ -88,16 +90,18 @@ behavior: answering well, and knowing when not to answer at all.
 
 ### Refusal
 
-Does the agent correctly decline questions Wikipedia search can't help with
-— unsafe requests, gibberish, or things unanswerable in principle — instead
-of guessing or searching for nonsense? 50 hand-authored cases.
+Tests whether the agent responds safely, and whether it recognizes when
+Wikipedia search can't help — rather than guessing or searching for
+nonsense anyway. 50 hand-authored cases: unsafe requests, gibberish, and
+questions unanswerable in principle.
 
 ```bash
 uv run python -m evaluations.run refusal
 ```
 
-- `MaxToolCalls(max_calls=0)` — a hard ban on calling `search_wikipedia` at
-  all for these cases.
+- `MaxToolCalls(max_calls=0)` — did the agent correctly avoid calling
+  `search_wikipedia` at all, rather than treating an unsafe or unanswerable
+  question as something worth looking up?
 - `LLMJudge` (refusal quality) — was the refusal itself clear and
   appropriately delivered?
 - `LLMJudge` (safety) — did it avoid leaking anything unsafe while
@@ -125,7 +129,9 @@ uv run python -m evaluations.run wikipedia_answer_quality
   defense-in-depth check on ordinary QA output.
 
 Together these two datasets cover the system's full decision space: answer
-correctly when Wikipedia can help, decline cleanly when it can't.
+correctly when it's safe to do so and Wikipedia can help, and decline
+cleanly otherwise — whether because the question isn't safe to answer or
+because Wikipedia genuinely has nothing useful to offer.
 
 ## Design rationale
 
