@@ -239,7 +239,7 @@ Agent system prompt guidelines:
 
 ### Key Iterations
 
-I made the agent progressively more verifiable, not all at once:
+I made the agent progressively more verifiable for auditability:
 
 - **Built the audit trail from what the agent actually did**, not a
   summary written after the fact.
@@ -250,7 +250,7 @@ I made the agent progressively more verifiable, not all at once:
   retrieved evidence and the judge's own reasoning alongside its verdict,
   so a grading decision can be checked too, not just the agent's answer.
 - **Made the agent itself easy to verify in isolation.** Its dependencies
-  (the model, the Wikipedia client) are passed in rather than hard-coded,
+  (the model, the Wikipedia client) are injected in rather than hard-coded,
   so tests can swap in a fake and check the agent's behavior directly,
   without needing a real API key or a live network call.
 
@@ -266,10 +266,8 @@ I made the agent progressively more verifiable, not all at once:
 - **Bootstrap the eval set from synthetic user activity.** With no real
   usage to sample from yet, generate diverse synthetic queries along
   dimensions likely to reveal failures (e.g. question type, phrasing,
-  ambiguity) rather than hand-authoring every case one at a time — the
-  approach Hamel Husain's evals methodology recommends for exactly this
-  situation.
-- **Use the full HotpotQA dataset**, not just the 50 hard-difficulty cases
+  ambiguity).
+- **Use the full HotpotQA validation dataset**, not just the 50 hard-difficulty cases
   currently sampled, for broader coverage.
 - **Red-team the safety dimension** more rigorously than the current
   hand-authored unsafe cases can.
