@@ -177,28 +177,30 @@ handled well, not just that one happened:
 
 ### Prompt Engineering Approach
 
-Two different things get prompted in this system — the LLM judges that grade
-eval cases, and the agent that answers questions — and each was designed
-deliberately, not as an afterthought.
+This solution has two categories of prompts: the prompts for the LLM
+judges that grade eval cases, and the agent's system prompt for steering the agent.
 
 #### Judge Prompts
 
 Every LLM-graded check above is binary Pass/Fail, not a 1–5 scale. Scale
 scores look precise but aren't reproducible: annotators (and judges) rarely
-agree on the line between a 3 and a 4, so that noise just gets inherited
-(following Hamel Husain's evals methodology). Each rubric ships a few
-labeled Pass/Fail examples with a worked critique, and judging is done by a
-stronger, separate model (Claude Opus) than the one being tested (Claude
-Sonnet), to reduce self-grading bias.
+agree on the line between a 3 and a 4, so that noise just gets inherited.
+Each rubric ships a few labeled Pass/Fail examples with a worked critique, 
+and judging is done by a stronger, separate model (Claude Opus) than the 
+one being tested (Claude Sonnet), to reduce self-grading bias.
 
 #### Agent System Prompt
 
-Follows Anthropic's own prompt-engineering guidance: direct, unambiguous
+Follows Anthropic's own [prompt-engineering guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices): direct, unambiguous
 instructions, one guideline per behavior, and a concrete example over an
-abstract description where it counts (e.g. "Ada Lovelace", not "tell me
-about the person who wrote the first computer program", for how to phrase a
-search query). Core guidelines:
+abstract description where it counts.
+Agent system prompt guidelines:
 
+- **Decide whether the question is answerable at all** — is this a
+  genuine, factual question, or something incoherent, unanswerable in
+  principle, or unsafe to answer? Only genuine factual questions move on
+  to search; everything else gets a plain refusal instead. This is where
+  the refusal behavior actually comes from.
 - **Search before answering** — the main defense against the model quietly
   answering from its own training data instead of grounding the answer in
   something retrieved.
