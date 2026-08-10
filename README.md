@@ -131,10 +131,11 @@ uv run python -m evaluations.run refusal
 ### Answer Quality
 
 Is the answer actually *good* when the agent does search? 50 hard,
-multi-hop HotpotQA questions.
+multi-hop HotpotQA questions from the
+[`answer_quality`](evaluations/datasets/answer_quality.yaml) dataset.
 
 ```bash
-uv run python -m evaluations.run wikipedia_answer_quality
+uv run python -m evaluations.run answer_quality
 ```
 
 - `MaxToolCalls(max_calls=2)` / `ToolCorrectness` — a tool-call budget

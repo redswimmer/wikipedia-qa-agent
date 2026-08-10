@@ -60,7 +60,7 @@ uv run pre-commit run --all-files
   `datasets` dev dependency interactively (e.g. `datasets.load_dataset("hotpotqa/hotpot_qa",
   "distractor", split="validation", streaming=True)`), build `Case`/`Dataset`
   objects per `evaluations/models.py`, and call
-  `Dataset.to_file(...)`. See `evaluations/datasets/wikipedia_answer_quality.yaml`'s
+  `Dataset.to_file(...)`. See `evaluations/datasets/answer_quality.yaml`'s
   header comment for the exact methodology used last time — no build script
   is kept in the repo, only the resulting YAML (see the design doc under
   `docs/superpowers/specs/` for why).

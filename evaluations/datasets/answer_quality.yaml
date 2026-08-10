@@ -1,8 +1,8 @@
-# yaml-language-server: $schema=wikipedia_answer_quality_schema.json
+# yaml-language-server: $schema=answer_quality_schema.json
 # 50 hard-difficulty questions from HotpotQA's validation split (Yang et
 # al., 2018 -- arXiv:1809.09600, https://huggingface.co/datasets/hotpotqa/hotpot_qa)
 
-name: wikipedia_answer_quality
+name: answer_quality
 cases:
 - name: hard_comparison_000_were_scott_derrickson_and_ed_wood
   inputs: Were Scott Derrickson and Ed Wood of the same nationality?

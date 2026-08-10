@@ -32,7 +32,7 @@ uv run pytest tests/unit/test_app_imports.py::test_app_modules_import  # single 
 uv run pre-commit run --all-files  # run every quality gate without committing
 
 uv run python -m app.query_agent "your question"  # ask a question
-uv run python -m evaluations.run wikipedia_answer_quality  # run an eval dataset (hits real API + Wikipedia)
+uv run python -m evaluations.run answer_quality  # run an eval dataset (hits real API + Wikipedia)
 ```
 
 Every commit runs ruff (lint + format), `ty`, and pytest via pre-commit; the
@@ -256,7 +256,7 @@ to a logging contract and can drift from what the model actually saw).
   unanswerable, 17/17/16 — checked via native `MaxToolCalls(max_calls=0)` plus two
   `LLMJudge` evaluators for refusal quality and safety, judged by a
   different model than the agent under test to reduce self-grading bias),
-  and `wikipedia_answer_quality` (50 hard-difficulty HotpotQA validation-split
+  and `answer_quality` (50 hard-difficulty HotpotQA validation-split
   questions, graded on correctness, faithfulness, relevance, and safety via
   four `LLMJudge` evaluators — `safety` reused verbatim from `refusal` —
   plus a tool-call budget of 1-2 search calls via `MaxToolCalls`/

@@ -55,7 +55,7 @@ Between them, every question the system can face is covered by one or the
 other — there's no third category of input left unmeasured.
 
 **Answer quality (correctness, faithfulness, relevance, safety)**
-(`wikipedia_answer_quality`) — grades whether an answer is actually *good*:
+(`answer_quality`) — grades whether an answer is actually *good*:
 not just present, but correct, grounded, on-topic, and safe. Four
 `LLMJudge` axes over 50 hard, multi-hop HotpotQA questions: correctness
 (does the answer match the known gold answer, judged semantically),
@@ -96,8 +96,8 @@ quality and safety are graded separately, so a report can distinguish
 *(Note on suite history: an earlier third dataset, `format_validation`,
 checked only that the system produced some answer and some tool-call
 record, on 3 HotpotQA cases — a cheap early sanity check written before
-`wikipedia_answer_quality` existed. It was retired once
-`wikipedia_answer_quality`'s `ToolCorrectness`/`MaxToolCalls` pair and four
+`answer_quality` existed. It was retired once
+`answer_quality`'s `ToolCorrectness`/`MaxToolCalls` pair and four
 judges started enforcing the same structural guarantee strictly, across 50
 cases instead of 3, as a side effect of grading something more useful. The
 two datasets above are the intended, complete design — not a stopgap
@@ -117,7 +117,7 @@ recur on the second run, but a single run isn't enough to call it resolved
 either way — LLM judges (and, per below, the underlying API's content
 filtering) aren't perfectly deterministic.
 
-**Wikipedia answer quality** (`wikipedia_answer_quality`): the first live run surfaced an eval-*infrastructure*
+**Wikipedia answer quality** (`answer_quality`): the first live run surfaced an eval-*infrastructure*
 finding rather than an agent-quality one — `evaluations/run.py`'s
 `evaluate_sync()` call had no `max_concurrency` cap, so all 50 cases fired
 simultaneously and 46-50% failed outright (connection errors, tool-retry
@@ -192,7 +192,7 @@ questions so the judge isn't calibrated on the same cases it grades.
 
 **After:** re-ran the eval suite active at the time (`format_validation`,
 `refusal`). Format validation stayed 100% pass (no regression to ordinary
-behavior) — that dataset was later retired once `wikipedia_answer_quality`
+behavior) — that dataset was later retired once `answer_quality`
 made the same structural check redundant, see Section 2. Every case in the
 previously-weak refusal category passed cleanly, and the run that
 previously crashed completed normally — 30/30 cases finished this time,
@@ -245,16 +245,16 @@ ones.
 - Validate the judges themselves against human-labeled examples before
   trusting them further — right now their alignment with human judgment is
   assumed, not measured. This is the biggest open gap: every rubric in this
-  suite (including `wikipedia_answer_quality`'s four) was hand-authored with
+  suite (including `answer_quality`'s four) was hand-authored with
   synthetic few-shot examples, not calibrated against a labeled dataset.
 - Investigate the reproducible tool-retry-exhaustion failure on
   `hard_bridge_006` (Section 3) — it failed identically across all three
-  live runs of `wikipedia_answer_quality`, suggesting the agent's tool-retry
+  live runs of `answer_quality`, suggesting the agent's tool-retry
   budget of 1 isn't enough headroom for genuinely ambiguous search terms.
   Worth trying a slightly higher per-tool retry budget and re-running to see
   if it resolves, versus accepting that some fraction of hard multi-hop
   questions will always exhaust a low retry budget.
-- Scale `wikipedia_answer_quality` beyond 50 cases now that the pattern
+- Scale `answer_quality` beyond 50 cases now that the pattern
   (four bundled `LLMJudge` axes plus a tool-call budget) is proven — the
   main cost is live-run time/money, not design work.
 - Wire eval pass-rate thresholds into CI so a regression is visible
