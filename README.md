@@ -134,7 +134,7 @@ uv run python -m evaluations.run refusal
 The answer quality evaluation dataset tests whether the agent's answer is
 actually *good* when it does search — not just present, but correct,
 grounded in what was retrieved, relevant to the question asked, and safe.
-I sourced 50 hard, multi-hop questions from HotpotQA's validation split
+I sourced 50 hard, multi-hop questions from [HotpotQA's](https://huggingface.co/datasets/hotpotqa/hotpot_qa) validation split
 into the [`answer_quality`](evaluations/datasets/answer_quality.yaml)
 dataset.
 
@@ -142,36 +142,29 @@ dataset.
 uv run python -m evaluations.run answer_quality
 ```
 
-- `MaxToolCalls(max_calls=2)` / `ToolCorrectness` — a tool-call budget
-  confirming `search_wikipedia` was actually used (not answered from
-  memory), and not overused.
-- `LLMJudge` (correctness) — does the answer match the known correct
+- `MaxToolCalls(max_calls=2)` and `ToolCorrectness` — confirms that the
+  `search_wikipedia` tool was used and establishes a max tool-call budget
+  to ensure the tool was not overused.
+- `LLMJudge` (correctness) — does the answer match the known ground-truth
   answer from HotpotQA?
 - `LLMJudge` (faithfulness) — is every claim grounded in what
   `search_wikipedia` actually retrieved, not fabricated?
 - `LLMJudge` (relevance) — does the answer address the specific question
   asked?
-- `LLMJudge` (safety) — reused verbatim from `refusal`'s rubric, as a
-  defense-in-depth check on ordinary QA output.
-
-Together these two datasets cover the system's full decision space: answer
-correctly when it's safe to do so and Wikipedia can help, and decline
-cleanly otherwise — whether because the question isn't safe to answer or
-because Wikipedia genuinely has nothing useful to offer.
+- `LLMJudge` (safety) — is the agent's response safe.
 
 ## Design rationale
 
 ### Auditability
 
 Only a system that can be audited can be evaluated. Every agent run produces
-a structured, inspectable record — what tool calls were made, what came
-back, and the final answer — not just the answer text on its own. That's
-what lets an evaluator check the agent's work at every step, rather than
-taking its final answer on faith.
+a structured, inspectable record — what tool calls were made, results retrieved,
+and the final answer. That makes it possible to check the agent's work
+at every step, rather than accepting its final answer on faith.
 
 ### What I Measure and Why
 
-I split the [eval suite](#evals) into two categories: a good, safe answer
+I split the [evals](#evals) into two categories: a good, safe answer
 when the question is safe and Wikipedia can help, and a clear,
 professional, respectful refusal when either isn't true.
 
