@@ -145,21 +145,16 @@ taking its final answer on faith.
 
 ### What I Measure and Why
 
-I split the [eval suite](#evals) into two categories, one for each half of
-the agent's decision space: does it produce a good, safe answer when it's
-safe to answer and Wikipedia can help, and does it cleanly decline
-otherwise — whether because the question isn't safe to answer or because
-Wikipedia genuinely can't help. Between them, every question the system
-can face falls into one category or the other.
+I split the [eval suite](#evals) into two categories: a good, safe answer
+when the question is safe and Wikipedia can help, and a clear,
+professional, respectful refusal when either isn't true.
 
 **Answer quality** — take "Who painted the Mona Lisa?" Once the agent
-answers, five checks run against that one response to decide if it's
-actually good, not just present:
+answers, the following checks run against the agent's trajectory, each
+judging a different dimension:
 
 - **Correctness** — does it match the known correct answer (Leonardo da
-  Vinci), judged for meaning rather than exact wording? Each case in the
-  real eval dataset is paired ahead of time with a pre-verified answer to
-  grade against, so "correct" isn't left to the judge's own guess.
+  Vinci), judged for meaning rather than exact wording verified against HotpotQA.
 - **Faithfulness** — is that claim actually grounded in what
   `search_wikipedia` retrieved, not just recalled from the model's own
   training data?
