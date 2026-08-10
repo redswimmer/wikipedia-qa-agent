@@ -83,31 +83,46 @@ help with related things I *can* discuss safely, such as...
 
 ## Evals
 
-The eval suite grades the two halves of correct behavior — answering well,
-and knowing when not to answer at all:
+I chose to grade the agent along two dimensions — the two halves of correct
+behavior: answering well, and knowing when not to answer at all.
+
+### Refusal
+
+Does the agent correctly decline questions Wikipedia search can't help with
+— unsafe requests, gibberish, or things unanswerable in principle — instead
+of guessing or searching for nonsense? 50 hand-authored cases.
 
 ```bash
 uv run python -m evaluations.run refusal
+```
+
+- `MaxToolCalls(max_calls=0)` — a hard ban on calling `search_wikipedia` at
+  all for these cases.
+- `LLMJudge` (refusal quality) — was the refusal itself clear and
+  appropriately delivered?
+- `LLMJudge` (safety) — did it avoid leaking anything unsafe while
+  declining?
+
+### Wikipedia Answer Quality
+
+Is the answer actually *good* when the agent does search? 50 hard,
+multi-hop HotpotQA questions.
+
+```bash
 uv run python -m evaluations.run wikipedia_answer_quality
 ```
 
-- **Refusal** (`refusal`) — does the agent correctly decline questions Wikipedia search can't
-  help with (unsafe requests, gibberish, or things unanswerable in principle), instead of
-  guessing or searching for nonsense? 50 hand-authored cases.
-  - `MaxToolCalls(max_calls=0)` — a hard ban on calling `search_wikipedia` at all for these
-    cases.
-  - `LLMJudge` (refusal quality) — was the refusal itself clear and appropriately delivered?
-  - `LLMJudge` (safety) — did it avoid leaking anything unsafe while declining?
-- **Wikipedia answer quality** (`wikipedia_answer_quality`) — is the answer actually *good*?
-  50 hard, multi-hop HotpotQA questions.
-  - `MaxToolCalls(max_calls=2)` / `ToolCorrectness` — a tool-call budget confirming
-    `search_wikipedia` was actually used (not answered from memory), and not overused.
-  - `LLMJudge` (correctness) — does the answer match the known gold answer?
-  - `LLMJudge` (faithfulness) — is every claim grounded in what `search_wikipedia` actually
-    retrieved, not fabricated?
-  - `LLMJudge` (relevance) — does the answer address the specific question asked?
-  - `LLMJudge` (safety) — reused verbatim from `refusal`'s rubric, as a defense-in-depth check
-    on ordinary QA output.
+- `MaxToolCalls(max_calls=2)` / `ToolCorrectness` — a tool-call budget
+  confirming `search_wikipedia` was actually used (not answered from
+  memory), and not overused.
+- `LLMJudge` (correctness) — does the answer match the known correct
+  answer from HotpotQA?
+- `LLMJudge` (faithfulness) — is every claim grounded in what
+  `search_wikipedia` actually retrieved, not fabricated?
+- `LLMJudge` (relevance) — does the answer address the specific question
+  asked?
+- `LLMJudge` (safety) — reused verbatim from `refusal`'s rubric, as a
+  defense-in-depth check on ordinary QA output.
 
 Together these two datasets cover the system's full decision space: answer
 correctly when Wikipedia can help, decline cleanly when it can't.
@@ -117,18 +132,18 @@ correctly when Wikipedia can help, decline cleanly when it can't.
 ### Auditability
 
 Only a system that can be audited can be evaluated. Every agent run produces
-a structured, inspectable record — what was searched, what came back, and
-the final answer — not just the answer text on its own. That's what lets a
-evaluator check a claim against what the agent actually saw, rather than taking
-the answer on faith.
+a structured, inspectable record — what tool calls were made, what came
+back, and the final answer — not just the answer text on its own. That's
+what lets an evaluator check the agent's work at every step, rather than
+taking its final answer on faith.
 
 ### What I Measure and Why
 
 I split the eval suite into two categories, one for each half of the agent's
-decision space: does it produce a good answer when Wikipedia can actually
-help, and does it decline cleanly when the question isn't Wikipedia's to
-answer. Between them, every question the system can face falls into one
-category or the other.
+decision space: does it produce a good, safe answer when Wikipedia search
+can actually help, and does it cleanly refuse — unsafe requests included —
+when it shouldn't answer at all. Between them, every question the system
+can face falls into one category or the other.
 
 **Answer quality** — take "Who painted the Mona Lisa?" Once the agent
 answers, five checks run against that one response to decide if it's
