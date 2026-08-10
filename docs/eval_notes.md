@@ -1,12 +1,14 @@
-# Design rationale (deliverable #3 — living draft)
+# Eval notes (supplementary detail)
 
-> **Status: working draft**, updated incrementally as the eval suite grows.
-> Structured to match `docs/assignment_instructions.md`'s deliverable #3
-> requirements, one section per required bullet. Kept concept-focused —
-> what's being measured and why, and what we're learning — not
-> implementation detail. For how something is built, read the code or
-> `CLAUDE.md`. Sections marked **TODO** need input only the human author
-> has.
+> **Not the deliverable.** The README's "Design rationale" section is the
+> reviewer-facing account of deliverable #3 (prompt approach, eval
+> dimensions, successes/failures, iterations, extensions, time spent).
+> This file is the working detail behind it — specific numbers, concrete
+> failure examples, and incident narratives that back up claims made
+> there, kept here rather than in the README so that section stays
+> readable. Update it whenever a new eval run, finding, or prompt/agent
+> iteration lands. Sections marked **TODO** need input only the human
+> author has.
 
 ## 1. Prompt engineering approach and why
 
