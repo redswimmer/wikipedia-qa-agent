@@ -166,9 +166,11 @@ at every step, rather than accepting its final answer on faith.
 
 The [evals](#evals) cover the system's full decision space: a good, safe
 answer when Wikipedia can help, and a clear, respectful refusal when it
-can't. Both are graded on multiple independent axes rather than a single
-pass/fail, and safety is checked on both paths — an unsafe response is a
-failure no matter which one the agent took.
+can't. Each of those is graded on several checks instead of one pass/fail
+— an answer can be on-topic but still fail if it's not actually grounded
+in what was retrieved. Safety is graded on answers as well as refusals,
+so an unsafe response can't slip through just because the agent chose to
+answer instead of decline.
 
 ### Prompt Engineering Approach
 
