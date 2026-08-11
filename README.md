@@ -164,22 +164,29 @@ at every step, rather than accepting its final answer on faith.
 
 ### What I Measure and Why
 
-The [evals](#evals) cover the system's full decision space: a good, safe
-answer when Wikipedia can help, and a clear, respectful refusal when it
-can't. Each of those is graded on several checks instead of one pass/fail
-— an answer can be on-topic but still fail if it's not actually grounded
-in what was retrieved. Safety is graded on answers as well as refusals,
-so an unsafe response can't slip through just because the agent chose to
-answer instead of decline.
+I grade the agent along two dimensions to evaluate correctness:
+
+- **Refusal** — does the agent recognize when a question shouldn't be
+  answered at all, rather than guessing or searching for nonsense? See
+  the [`refusal`](evaluations/datasets/refusal.yaml) dataset.
+- **Answer quality** — when it does answer, is that answer actually
+  correct, grounded, and safe? See the
+  [`answer_quality`](evaluations/datasets/answer_quality.yaml) dataset.
+
+Each dimension is graded on several independent checks rather than a
+single pass/fail, and safety is checked on both — an unsafe response is
+a failure whether the agent answered or declined. The exact checks each
+dimension runs are covered in [Evals](#evals) above.
 
 ### Prompt Engineering Approach
 
-This solution has two categories of prompts: the prompts for the LLM
-judges that grade eval cases, and the agent's system prompt for steering the agent.
+My solution has two categories of LLM prompts: the prompts for the LLM
+judges that grade eval cases, and the agent's system prompt for steering the agent
+on how to answer the user's query.
 
 #### Judge Prompts
 
-Every LLM-graded check above is binary Pass/Fail, not a 1–5 scale. Scale
+Every LLMJudge is binary Pass/Fail, not a 1–5 scale. Scale
 scores look precise but aren't reproducible: annotators (and judges) rarely
 agree on the line between a 3 and a 4, so that noise just gets inherited.
 Each rubric ships a few labeled Pass/Fail examples with a worked critique, 
@@ -190,7 +197,8 @@ one being tested (Claude Sonnet), to reduce self-grading bias.
 
 Follows Anthropic's own [prompt-engineering guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices): direct, unambiguous
 instructions, one guideline per behavior, and a concrete example over an
-abstract description where it counts.
+abstract description.
+
 Agent system prompt guidelines:
 
 - **Decide whether the question is answerable at all** — is this a
@@ -217,7 +225,7 @@ Agent system prompt guidelines:
   unprompted — without being explicitly asked to. On the answer-quality
   side, faithfulness, relevance, and safety stayed near-perfect throughout;
   only correctness caught real misses.
-- **Agent skipped search when confident.** Despite "always search," the
+- **Agent sometimes failed to search and instead relied on it's training data.** Despite "always search," the
   model answered easy trivia (e.g. the capital of France) from its own
   training knowledge instead of calling `search_wikipedia`. Fixed by 
   closing the loophole explicitly in the system prompt.
@@ -233,6 +241,15 @@ Agent system prompt guidelines:
   cases used real technical-sounding jargon a careful agent might
   reasonably search for before declining. Replaced with unambiguous
   nonsense words.
+- **Agent sometimes searches before recognizing a made-up term as fake.**
+  Asked about "the plinkory thing" and "the borvath cycle" — both fully
+  invented — it ran a Wikipedia search before declining, instead of
+  recognizing the term as fabricated up front.
+- **Runaway tool calls on a tricky, ambiguous query.** Asked *"Who was
+  known by his stage name Aladin and helped organizations improve their
+  performance as a consultant?"* — where "Aladin" collides with the far
+  more famous "Aladdin" — the agent spiraled into 59 search attempts,
+  $1.01, and over four minutes before still landing on the wrong answer.
 
 ### Key Iterations
 
@@ -271,7 +288,8 @@ I made the agent progressively more verifiable for auditability:
 
 ### Time Spent
 
-I worked on this over the weekend and would have liked to continue working on 
-it longer but I was exceeding 8 hours.  In general, I feel it's at a good
-stopping point with room for improvement.
+I worked on this project over the span of a couple days, both interacting with
+Claude Code directly and using spec-driven development (SDD with [superpowers skill](https://github.com/obra/superpowers)) with remote control sessions.
+I would have liked to spend more time on the project, and to be honest I did exceed the 
+8 hour cap.  There is room for improvement, but in general I feel good about the state of the project.
 

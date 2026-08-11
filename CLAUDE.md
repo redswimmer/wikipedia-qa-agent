@@ -37,6 +37,11 @@ uv run pre-commit run --all-files  # run every quality gate without committing
 
 uv run python -m app.query_agent "your question"  # ask a question
 uv run python -m evaluations.run answer_quality  # run an eval dataset (hits real API + Wikipedia)
+
+# capturing a run's report to a file for the record (e.g. evaluations/results/)?
+# widen the terminal width first — Rich defaults to 80 cols off-tty, which
+# truncates the Case ID column and wraps everything else one word per line:
+COLUMNS=250 uv run python -m evaluations.run answer_quality > evaluations/results/<name>.txt
 ```
 
 Every commit runs ruff (lint + format), `ty`, and pytest via pre-commit; the
@@ -219,7 +224,12 @@ to a logging contract and can drift from what the model actually saw).
   evaluator(s) are serialized together via `Dataset.to_file(...)`, so the
   YAML is self-describing, with an auto-generated `*_schema.json` sibling
   for IDE autocomplete. Depends only on `app/*`, never `app/query_agent.py`
-  — same rule as `query_agent.py` itself.
+  — same rule as `query_agent.py` itself. `results/` — raw `report.print()`
+  output from notable live runs, committed on purpose (not gitignored):
+  reviewers don't have an API key to run evals themselves, so these are the
+  only live evidence they see. Capture with the wide-`COLUMNS` invocation
+  above; findings worth a reviewer's attention get distilled from these into
+  `eval_notes.md`/README, not left as raw files for someone to dig through.
 - OpenTelemetry/Logfire: `app/agent.py` sets `agent.instrument = True` on
   the shared `agent` object (harmless without a configured tracer — spans
   go to a no-op provider; only `evaluations/run.py` actually configures one,
