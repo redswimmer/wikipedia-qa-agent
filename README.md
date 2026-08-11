@@ -201,21 +201,19 @@ abstract description.
 
 Agent system prompt guidelines:
 
-- **Decide whether the question is answerable at all** — is this a
-  genuine, factual question, or something incoherent, unanswerable in
-  principle, or unsafe to answer? Only genuine factual questions move on
-  to search; everything else gets a plain refusal instead. This is where
-  the refusal behavior actually comes from.
-- **Search before answering** — the main defense against the model quietly
-  answering from its own training data instead of grounding the answer in
-  something retrieved.
-- **Keep search queries short and specific**, not a restatement of the
-  whole question.
+- **Decide whether the question is answerable at all** — ask if this is an
+  answerable question, or something incoherent, unanswerable in
+  principle, or unsafe to answer.
+- **Wikipedia search before answering** — directs the model to search and 
+  not answer from its own training data.
+- **Keep search queries short and specific**, directs the model to avoid 
+  passing the user's entire question and instead restate it to a focused
+  Wikipedia search query.
 - **Retry with a different query** before giving up on a bad search.
 - **Ground the answer in what was retrieved**; say what's missing rather
   than guess.
-- **Don't narrate the search process** in the answer — the audit trail is
-  surfaced separately, so the answer stays direct.
+- **Don't narrate the search process** — answer directly, without
+  narration or reference to these instructions.
 
 ### Where It Succeeds and Fails
 
@@ -270,6 +268,12 @@ I made the agent progressively more verifiable for auditability:
 
 ### How I'd Extend This With More Time
 
+- **Cap tool calls, not just guide them.** One case spiraled to 76 search
+  calls and $1.52 (confirmed across two runs) because the "retry with a
+  different query" guideline has no ceiling. I'd fix the prompt to name a
+  limit, and — since a prompt is guidance, not an enforced constraint —
+  also add a real cap in the agent/tool layer so a bad case fails fast
+  instead of burning budget indefinitely.
 - **Validate the judges against human experts.** Right now their alignment
   with human judgment is assumed, not measured — every rubric was
   hand-authored with synthetic few-shot examples, not calibrated against

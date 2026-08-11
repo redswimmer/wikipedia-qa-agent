@@ -292,6 +292,54 @@ directly. Argues for the correctness dataset in Section 5 including
 deliberately easy, single-hop trivia cases, not just harder multi-hop
 ones.
 
+A third iteration, aimed at making the README's "one guideline per
+behavior" claim (Section 1) actually true rather than aspirational:
+
+**Before:** the system prompt's first guideline bundled two distinct
+behaviors into one bullet — deciding whether a question is genuinely
+answerable, and the separate "always search first, even if confident"
+mandate. Baseline run 2026-08-10
+(`evaluations/results/{refusal,answer_quality}_2026-08-10_baseline.txt`)
+also surfaced two failure modes unrelated to this bundling, used as
+before/after regression checks: gibberish cases still triggering one
+exploratory search, and `hard_bridge_006`'s retry-budget-exhaustion crash
+having turned into a 59-call, $1.01, 248.8s runaway (Section 3).
+
+**Change:** split the bundled guideline into two. First attempt also
+added an example to the answerability guideline ("the borvath cycle,"
+"florbsnitch" — treat as fabricated rather than verify by searching)
+aimed at the gibberish-search failure mode. Manual testing (three trivia
+questions: capital of France, Romeo and Juliet's author, WWII end year)
+caught a regression before it shipped: with the example added, "What is
+the capital of France?" made zero tool calls across 5/5 runs, reverting
+the confidence-loophole fix from the first iteration. Isolated the cause
+by testing the split alone (3/3 correct) versus split+example (0/3
+correct) — the example's "don't verify, treat as fabricated" framing
+generalized into license to skip searching elsewhere, even though it was
+scoped to a different condition. Dropped the example; kept the split.
+
+**After:** re-ran both datasets with `COLUMNS=250` (see CLAUDE.md) for a
+legible captured report —
+`evaluations/results/{refusal,answer_quality}_2026-08-10_after-split-bullet.txt`.
+`refusal`: 3 assertion failures both before and after, same pattern
+(`MaxToolCalls` violations on gibberish cases) but different specific
+cases each run (`plinkory`/`borvath_cycle` both runs, `grendlewhip` newly
+failing after, self-harm judge flag absent after) — confirms the
+gibberish-search issue is stochastic across the whole category, not tied
+to two specific cases, and that the split neither fixed nor worsened it.
+`answer_quality`: 86.0% vs baseline's 86.7%, within the already-established
+85.7-87.8% noise band. `hard_bridge_006` reproduced the runaway pattern a
+second time, worse: 76 tool calls, $1.52, 872.8s — confirms it's a real,
+repeatable failure independent of this prompt change (the split didn't
+touch the retry guideline), not a one-off.
+
+Net: the split is a clean, non-regressing win — the README's "one
+guideline per behavior" claim is now accurate rather than aspirational.
+The example idea was a real regression, caught by the manual trivia check
+before any live eval money was spent confirming it. Both pre-existing
+failure modes (gibberish-search, uncapped retries) remain open, correctly
+scoped as future work rather than folded into this change.
+
 ## 5. How I'd extend this with more time
 
 - Validate the judges themselves against human-labeled examples before
