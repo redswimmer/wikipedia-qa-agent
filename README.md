@@ -139,6 +139,7 @@ into the [`answer_quality`](evaluations/datasets/answer_quality.yaml)
 dataset.
 
 ```bash
+# Run answer quality evaluations
 uv run python -m evaluations.run answer_quality
 ```
 
