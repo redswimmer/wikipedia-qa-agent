@@ -11,12 +11,16 @@ constraint from that spec — no built-in hosted search/RAG tools (e.g.
 Anthropic's `web_search` tool type); the retrieval integration must be
 hand-built.
 
-**`docs/design_rationale.md`** is deliverable #3's living draft — update it
-whenever a new eval dataset, finding, or prompt/agent iteration lands, not
-only at the end. It's structured to match the assignment's required
-sections exactly (prompt rationale, eval design rationale, successes/
-failures learned from evals, iterations made, extension ideas, time spent)
-so nothing has to be reconstructed from git history later.
+**Deliverable #3 (design rationale) lives in `README.md`'s "Design
+rationale" section** — that's what a reviewer reads: prompt approach, eval
+dimensions, successes/failures, iterations, extensions, time spent.
+**`docs/eval_notes.md`** is supplementary, not the deliverable — the
+working detail behind it (specific run numbers, concrete failure
+examples, incident narratives) kept out of the README so that section
+stays readable. Update it whenever a new eval dataset, finding, or
+prompt/agent iteration lands, not only at the end; pull anything
+reviewer-worthy up into the README yourself rather than leaving it
+stranded here.
 
 ## Commands
 
@@ -32,7 +36,12 @@ uv run pytest tests/unit/test_app_imports.py::test_app_modules_import  # single 
 uv run pre-commit run --all-files  # run every quality gate without committing
 
 uv run python -m app.query_agent "your question"  # ask a question
-uv run python -m evaluations.run wikipedia_answer_quality  # run an eval dataset (hits real API + Wikipedia)
+uv run python -m evaluations.run answer_quality  # run an eval dataset (hits real API + Wikipedia)
+
+# capturing a run's report to a file for the record (e.g. evaluations/results/)?
+# widen the terminal width first — Rich defaults to 80 cols off-tty, which
+# truncates the Case ID column and wraps everything else one word per line:
+COLUMNS=250 uv run python -m evaluations.run answer_quality > evaluations/results/<name>.txt
 ```
 
 Every commit runs ruff (lint + format), `ty`, and pytest via pre-commit; the
@@ -215,7 +224,12 @@ to a logging contract and can drift from what the model actually saw).
   evaluator(s) are serialized together via `Dataset.to_file(...)`, so the
   YAML is self-describing, with an auto-generated `*_schema.json` sibling
   for IDE autocomplete. Depends only on `app/*`, never `app/query_agent.py`
-  — same rule as `query_agent.py` itself.
+  — same rule as `query_agent.py` itself. `results/` — raw `report.print()`
+  output from notable live runs, committed on purpose (not gitignored):
+  reviewers don't have an API key to run evals themselves, so these are the
+  only live evidence they see. Capture with the wide-`COLUMNS` invocation
+  above; findings worth a reviewer's attention get distilled from these into
+  `eval_notes.md`/README, not left as raw files for someone to dig through.
 - OpenTelemetry/Logfire: `app/agent.py` sets `agent.instrument = True` on
   the shared `agent` object (harmless without a configured tracer — spans
   go to a no-op provider; only `evaluations/run.py` actually configures one,
@@ -256,7 +270,7 @@ to a logging contract and can drift from what the model actually saw).
   unanswerable, 17/17/16 — checked via native `MaxToolCalls(max_calls=0)` plus two
   `LLMJudge` evaluators for refusal quality and safety, judged by a
   different model than the agent under test to reduce self-grading bias),
-  and `wikipedia_answer_quality` (50 hard-difficulty HotpotQA validation-split
+  and `answer_quality` (50 hard-difficulty HotpotQA validation-split
   questions, graded on correctness, faithfulness, relevance, and safety via
   four `LLMJudge` evaluators — `safety` reused verbatim from `refusal` —
   plus a tool-call budget of 1-2 search calls via `MaxToolCalls`/
