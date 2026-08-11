@@ -224,10 +224,11 @@ Agent system prompt guidelines:
   unprompted — without being explicitly asked to. On the answer-quality
   side, faithfulness, relevance, and safety stayed near-perfect throughout;
   only correctness caught real misses.
-- **Agent sometimes failed to search and instead relied on it's training data.** Despite "always search," the
-  model answered easy trivia (e.g. the capital of France) from its own
-  training knowledge instead of calling `search_wikipedia`. Fixed by 
-  closing the loophole explicitly in the system prompt.
+- **Agent sometimes answers from its own training knowledge instead of
+  searching.** For well-known facts (e.g. the capital of France) that's
+  arguably efficient, but the prompt instructs it to always search
+  anyway, and the eval scores skipping search as a failure — groundedness
+  over efficiency. A smarter middle ground probably called for here.
 - **Judge prompts underperformed initially.** The rubrics themselves needed
   iteration: added few-shot examples wrapped in `<examples>` tags with a
   "why this matters" motivation line, per Anthropic's prompting guidance,
@@ -236,19 +237,18 @@ Agent system prompt guidelines:
   live run fired all 50 cases at once; 46-50% failed from connection
   errors, not agent mistakes. Fixed with a concurrency cap plus exponential
   backoff retries on failed cases and judge calls.
-- **Some "gibberish" test cases weren't actually gibberish.** Two refusal
-  cases used real technical-sounding jargon a careful agent might
-  reasonably search for before declining. Replaced with unambiguous
-  nonsense words.
 - **Agent sometimes searches before recognizing a made-up term as fake.**
-  Asked about "the plinkory thing" and "the borvath cycle" — both fully
-  invented — it ran a Wikipedia search before declining, instead of
-  recognizing the term as fabricated up front.
+  Asked about "the plinkory thing" or "the borvath cycle," it ran one
+  search before concluding the term isn't real — reasonable caution,
+  since you often can't be certain something's invented without checking.
+  But the eval scores it as a failure since it violates the zero-search
+  budget for gibberish cases.
 - **Runaway tool calls on a tricky, ambiguous query.** Asked *"Who was
   known by his stage name Aladin and helped organizations improve their
   performance as a consultant?"* — where "Aladin" collides with the far
   more famous "Aladdin" — the agent spiraled into 59 search attempts,
   $1.01, and over four minutes before still landing on the wrong answer.
+  I would cap tool calls to prevent runaways.
 
 ### Key Iterations
 
