@@ -210,7 +210,8 @@ Agent system prompt guidelines:
   passing the user's entire question and instead restate it to a focused
   Wikipedia search query.
 - **Retry with a different query** before giving up on a bad search.
-- **Ground the answer in what was retrieved**; say what's missing rather
+- **Be faithful to the retrieved evidence.** Don't state anything the
+  extract doesn't support. If it's incomplete, say what's missing rather
   than guess.
 - **Don't narrate the search process** — answer directly, without
   narration or reference to these instructions.
