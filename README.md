@@ -153,7 +153,7 @@ uv run python -m evaluations.run answer_quality
   asked?
 - `LLMJudge` (safety) — is the agent's response safe.
 
-## Design rationale
+## Design Rationale
 
 ### Auditability
 
@@ -201,7 +201,7 @@ abstract description.
 
 Agent system prompt guidelines:
 
-- **Decide whether the question is answerable at all** — ask if this is an
+- **Decide whether the question is answerable at all** — guides whether this is an
   answerable question, or something incoherent, unanswerable in
   principle, or unsafe to answer.
 - **Wikipedia search before answering** — directs the model to search and 
@@ -210,9 +210,8 @@ Agent system prompt guidelines:
   passing the user's entire question and instead restate it to a focused
   Wikipedia search query.
 - **Retry with a different query** before giving up on a bad search.
-- **Ground the answer in what was retrieved.** Don't state anything the
-  extract doesn't support. If it's incomplete, say what's missing rather
-  than guess.
+- **Ground the answer in what was retrieved.** Only give answers supported by the
+  retrieved results. If it's incomplete, say what's missing rather than guess.
 - **Don't narrate the search process** — answer directly, without
   narration or reference to these instructions.
 
@@ -227,12 +226,12 @@ Agent system prompt guidelines:
 - **Agent sometimes answers from its own training knowledge instead of
   searching.** For well-known facts (e.g. the capital of France) that's
   arguably efficient, but the prompt instructs it to always search
-  anyway, and the eval scores skipping search as a failure — groundedness
-  over efficiency. A smarter middle ground probably called for here.
+  anyway, and the eval scores skipping search as a failure — prioritizing groundedness
+  over efficiency. A more reasonable middle ground would be to allow for efficiency
+  without penalty.
 - **Judge prompts underperformed initially.** The rubrics themselves needed
-  iteration: added few-shot examples wrapped in `<examples>` tags with a
-  "why this matters" motivation line, per Anthropic's prompting guidance,
-  and enforced strict binary Pass/Fail verdicts.
+  iteration: I added few-shot examples wrapped in `<examples>` tags with a
+  "why this matters" motivation line, per [Anthropic's prompting guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices), and enforced strict binary Pass/Fail verdicts.
 - **Eval infrastructure overwhelmed Wikipedia's rate limiter.** The first
   live run fired all 50 cases at once; 46-50% failed from connection
   errors, not agent mistakes. Fixed with a concurrency cap plus exponential
@@ -248,53 +247,57 @@ Agent system prompt guidelines:
   performance as a consultant?"* — where "Aladin" collides with the far
   more famous "Aladdin" — the agent spiraled into 59 search attempts,
   $1.01, and over four minutes before still landing on the wrong answer.
-  I would cap tool calls to prevent runaways.
+  I should cap tool calls in the agent to prevent runaways like this.
 
 ### Key Iterations
 
-I made the agent progressively more verifiable for auditability:
+Most of my iterations were focused on making the agent progressively more auditable:
 
-- **Built the audit trail from what the agent actually did**, not a
-  summary written after the fact.
-- **Made that trail visible in real time in the CLI** — tool calls and the
-  answer stream live as they happen, not just in a report after the run
-  finishes.
-- **Extended the same idea to grading.** The eval report shows the
+- **Agent returns a detailed verifiable audit trail** of tool calls,
+  retrieved results and the final answer. We never just evaluate a final
+  answer.
+- **Made it easy to audit the LLM Judges.** The eval report shows the
   retrieved evidence and the judge's own reasoning alongside its verdict,
-  so a grading decision can be checked too, not just the agent's answer.
-- **Made the agent itself easy to verify in isolation.** Its dependencies
+  so a grading decision can be audited easily, not just the agent's answer.
+  It's critical to audit our LLM judges so we can verify their decisions
+  align with human experts.
+- **Built the agent so it's easy to test in isolation with DI.** Its dependencies
   (the model, the Wikipedia client) are injected in rather than hard-coded,
   so tests can swap in a fake and check the agent's behavior directly,
   without needing a real API key or a live network call.
+- **Made that trail visible in real time in the CLI** — tool calls and the
+  answer stream live as they happen, not just in a report after the run
+  finishes.
 
 ### How I'd Extend This With More Time
 
-- **Cap tool calls, not just guide them.** One case spiraled to 76 search
-  calls and $1.52 (confirmed across two runs) because the "retry with a
-  different query" guideline has no ceiling. I'd fix the prompt to name a
-  limit, and — since a prompt is guidance, not an enforced constraint —
-  also add a real cap in the agent/tool layer so a bad case fails fast
-  instead of burning budget indefinitely.
+- **Cap agent's max tool calls.** One case spiraled into 59 search attempts
+  because the "retry with a different query" prompt guideline has no ceiling.
+  I'd fix the prompt to name a limit, and — since a prompt is guidance, 
+  not an enforced constraint — also add a real cap in the agent/tool layer 
+  so a bad case fails fast instead of burning budget tokens.
 - **Validate the judges against human experts.** Right now their alignment
   with human judgment is assumed, not measured — every rubric was
   hand-authored with synthetic few-shot examples, not calibrated against
-  labeled data.
+  expert labeled data.
 - **Spend more time auditing the eval datasets themselves**, not just the
   judges grading them — reviewing individual cases for quality and
   coverage.
 - **Bootstrap the eval set from synthetic user activity.** With no real
-  usage to sample from yet, generate diverse synthetic queries along
+  user activity to sample from yet, generate diverse synthetic user queries along
   dimensions likely to reveal failures (e.g. question type, phrasing,
   ambiguity).
 - **Use the full HotpotQA validation dataset**, not just the 50 hard-difficulty cases
   currently sampled, for broader coverage.
 - **Red-team the safety dimension** more rigorously than the current
   hand-authored unsafe cases can.
+- **Evaluate turn tool call trajectory** to see if each tool call makes sense for
+  efficiently progressing towards the final answer.
 
 ### Time Spent
 
-I worked on this project over the span of a couple days, both interacting with
+I built this project mainly over the span of a couple days, both interacting with
 Claude Code directly and using spec-driven development (SDD with [superpowers skill](https://github.com/obra/superpowers)) with remote control sessions.
-I would have liked to spend more time on the project, and to be honest I did exceed the 
-8 hour cap.  There is room for improvement, but in general I feel good about the state of the project.
+I would have liked to spend more time, and to be honest I did exceed the
+8 hour cap. There is room for improvement, but in general I feel good about the state of the project.
 
