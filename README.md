@@ -270,7 +270,7 @@ Most of my iterations were focused on making the agent progressively more audita
   answer stream live as they happen, not just in a report after the run
   finishes.
 
-### How I'd Extend This With More Time
+### Future Work
 
 - **Cap agent's max tool calls.** One case spiraled into 59 search attempts
   because the "retry with a different query" prompt guideline has no ceiling.
@@ -295,10 +295,4 @@ Most of my iterations were focused on making the agent progressively more audita
 - **Evaluate turn tool call trajectory** to see if each tool call makes sense for
   efficiently progressing towards the final answer.
 
-### Time Spent
-
-I built this project mainly over the span of a couple days, both interacting with
-Claude Code directly and using spec-driven development (SDD with [superpowers skill](https://github.com/obra/superpowers)) with remote control sessions.
-I would have liked to spend more time, and to be honest I did exceed the
-8 hour cap. There is room for improvement, but in general I feel good about the state of the project.
 
