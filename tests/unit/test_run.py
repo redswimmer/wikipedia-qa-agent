@@ -78,7 +78,7 @@ def test_bracketed_text_survives_rich_rendering(result):
         )
     )
 
-    assert result.split("]")[0] + "]" in rendered
+    assert result in rendered
 
 
 def test_unknown_dataset_name_exits_with_the_available_names(capsys):

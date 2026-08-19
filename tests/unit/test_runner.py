@@ -27,12 +27,13 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from app.agent import agent
 from app.runner import run_agent, run_agent_streaming
-from tests.unit.conftest import (
+from tests.unit.fakes import (
     EXTRACT,
     TITLE,
     MediaWiki,
     search_then_answer,
     streaming_model,
+    wikipedia_handler,
 )
 
 
@@ -112,16 +113,8 @@ def test_run_agent_records_failed_retry_before_successful_call():
             return _search("nonexistent")
         return ModelResponse(parts=[TextPart(content=EXTRACT)])
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        if MediaWiki.is_search(request):
-            return (
-                MediaWiki.search()
-                if "srsearch=nonexistent" in str(request.url)
-                else MediaWiki.search(TITLE)
-            )
-        return MediaWiki.extract(EXTRACT)
-
-    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+    transport = httpx.MockTransport(wikipedia_handler(no_results_for=("nonexistent",)))
+    with httpx.Client(transport=transport) as client:
         transcript = run_agent(
             agent, "Who was Ada Lovelace?", deps=client, model=FunctionModel(model)
         )

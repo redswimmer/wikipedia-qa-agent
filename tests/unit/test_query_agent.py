@@ -1,10 +1,7 @@
 """The CLI entrypoint, driven through `main()` with a fake model and transport.
 
-Ten tests used to assert on `_progress_parts`/`_text_delta`/`_colorize`
-directly: with only `model_factory` injectable, any path where the model called
-a tool would hit live Wikipedia, so the display logic was reachable only from
-below. With `client_factory` too, these cover the same branches through the
-real entrypoint and additionally pin the output routing and colour rules.
+Covers what a user sees: the answer streamed to stdout, tool progress to
+stderr, retries surfaced rather than swallowed, and colour only on a terminal.
 """
 
 import sys
@@ -18,13 +15,14 @@ from pydantic_ai.messages import (
     TextPart,
     ToolCallPart,
 )
+from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 
 from app import query_agent
-from tests.unit.conftest import EXTRACT, TITLE, MediaWiki, streaming_model
+from tests.unit.fakes import EXTRACT, TITLE, streaming_model, wikipedia_handler
 
 
-def _run(capsys, model, transport):
+def _run(capsys, model: Model, transport: httpx.BaseTransport):
     query_agent.main(
         ["Who was Ada Lovelace?"],
         model_factory=lambda: model,
@@ -38,12 +36,11 @@ def test_main_streams_the_answer_to_stdout_and_tool_progress_to_stderr(
 ):
     captured = _run(capsys, streaming_model(), wikipedia_mock_transport)
 
-    # Answer on stdout, under a single header, with the deltas in order.
     assert "Answer:" in captured.out
-    assert captured.out.count("Answer:") == 1
+    assert captured.out.count("Answer:") == 1  # header printed once, not per delta
     assert captured.out.strip().endswith(EXTRACT)
 
-    # Tool progress on stderr only, so `... > answer.txt` captures just the answer.
+    # Progress on stderr only, so `... > answer.txt` captures just the answer.
     assert "Answer:" not in captured.err
     assert "Tool calls:" in captured.err
     assert f"→ search_wikipedia(query='{TITLE}')" in captured.err
@@ -51,8 +48,8 @@ def test_main_streams_the_answer_to_stdout_and_tool_progress_to_stderr(
 
 
 def test_main_reports_a_failed_search_as_a_retry_in_the_progress_log(capsys):
-    """The `RetryPromptPart` branch: a search that finds nothing is surfaced to
-    the user rather than silently swallowed before the successful retry."""
+    """A search that finds nothing is surfaced to the user rather than silently
+    swallowed before the successful retry."""
 
     def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         if isinstance(messages[-1].parts[-1], RetryPromptPart):
@@ -66,53 +63,40 @@ def test_main_reports_a_failed_search_as_a_retry_in_the_progress_log(capsys):
         return ModelResponse(parts=[TextPart(content=EXTRACT)])
 
     async def stream(messages: list[ModelMessage], info: AgentInfo):
-        response = model(messages, info)
-        part = response.parts[0]
+        part = model(messages, info).parts[0]
         if isinstance(part, ToolCallPart):
             yield {0: DeltaToolCall(name=part.tool_name, json_args=part.args_as_json_str())}
         else:
             yield EXTRACT
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        if MediaWiki.is_search(request):
-            return (
-                MediaWiki.search()
-                if "srsearch=zzz" in str(request.url)
-                else MediaWiki.search(TITLE)
-            )
-        return MediaWiki.extract(EXTRACT)
-
-    captured = _run(
-        capsys, FunctionModel(model, stream_function=stream), httpx.MockTransport(handler)
-    )
+    transport = httpx.MockTransport(wikipedia_handler(no_results_for=("zzz",)))
+    captured = _run(capsys, FunctionModel(model, stream_function=stream), transport)
 
     assert "← [retry] No Wikipedia article found" in captured.err
     assert captured.out.strip().endswith(EXTRACT)
 
 
+@pytest.mark.parametrize("is_terminal", [False, True])
 def test_main_colorizes_only_when_the_stream_is_a_terminal(
-    capsys, monkeypatch, wikipedia_mock_transport
+    capsys, monkeypatch, wikipedia_mock_transport, is_terminal
 ):
     """Redirected output must stay clean — escape codes would corrupt
     `... > answer.txt` — while an interactive terminal gets the highlighting."""
-    piped = _run(capsys, streaming_model(), wikipedia_mock_transport)
+    if is_terminal:
+        monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+        monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
 
-    assert "\033[" not in piped.out
-    assert "\033[" not in piped.err
+    captured = _run(capsys, streaming_model(), wikipedia_mock_transport)
 
-    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
-    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
-    colored = _run(capsys, streaming_model(), wikipedia_mock_transport)
-
-    assert "\033[" in colored.out
-    assert "\033[" in colored.err
+    assert ("\033[" in captured.out) is is_terminal
+    assert ("\033[" in captured.err) is is_terminal
 
 
 def test_main_exits_with_a_friendly_message_when_the_api_key_is_blank(capsys, monkeypatch):
-    """Runs the real Settings -> resolve_real_model chain, so it also covers the
-    `min_length=1` guard: a blank key is how an unset key usually arrives, and
-    it must fail at startup rather than as a 401 partway through a run. The env
-    var takes precedence over any .env on disk, so this holds locally and in CI."""
+    """Runs the real Settings -> resolve_real_model chain, so this also covers
+    the `min_length=1` guard: a blank key is how an unset key usually arrives,
+    and it must fail at startup rather than as a 401 partway through a run. The
+    env var beats any .env on disk, so this holds locally and in CI alike."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "")
 
     with pytest.raises(SystemExit) as exc_info:

@@ -1,8 +1,8 @@
-"""Wiring of the eval suite: which judges a dataset gets, and the single task
-entrypoint every case runs through.
+"""Wiring of the eval suite: which judges each dataset is graded by, and the
+single task entrypoint every case runs through.
 
-A typo here fails silently — an unknown dataset name grades with zero judges and
-reports a clean sweep, which is the worst failure mode an eval harness has.
+Nothing here calls the API. These are the mistakes that produce a confident,
+all-green report rather than a visible failure.
 """
 
 import httpx
@@ -14,7 +14,7 @@ from app.config import Settings
 from evaluations import judges
 from evaluations.run import DATASETS_DIR
 from evaluations.task import production_task
-from tests.unit.conftest import EXTRACT, TITLE, search_then_answer
+from tests.unit.fakes import EXTRACT, TITLE, search_then_answer
 
 
 def _names(evaluators: list[LLMJudge]) -> set[str]:
@@ -63,8 +63,9 @@ def test_only_correctness_judges_against_the_gold_answer():
 
 def test_judge_model_differs_from_the_agent_default_to_avoid_self_grading():
     agent_model = Settings(anthropic_api_key="fake-key", _env_file=None).anthropic_model
+    judge_model = judges.JUDGE_MODEL.split(":", 1)[-1]  # strip the "anthropic:" prefix
 
-    assert agent_model not in judges.JUDGE_MODEL
+    assert agent_model != judge_model
 
 
 def test_production_task_runs_a_question_through_the_real_agent(wikipedia_mock_transport):
