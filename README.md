@@ -106,14 +106,13 @@ help with related things I *can* discuss safely, such as...
 app/
   prompts.py          # the agent's system prompt — the file is the prompt
   agent.py, tools.py  # agent definition + the search_wikipedia tool
-  runner.py           # run_agent(): shared entry point for the CLI and the
-                      #   eval suite; returns the auditable run transcript
-  query_agent.py      # CLI entrypoint
+  runner.py           # shared entry point for CLI and evals; returns the audit transcript
+  query_agent.py      # CLI
 evaluations/
-  judge_prompts/      # one file per judge rubric, sent to the judge verbatim
-  datasets/           # refusal + answer_quality cases (YAML)
-  results/            # raw reports from notable live eval runs
-  run.py              # eval runner (python -m evaluations.run <dataset>)
+  judge_prompts/      # one file per judge rubric, sent verbatim
+  datasets/           # refusal + answer_quality cases
+  results/            # raw reports from notable live runs
+  run.py              # eval runner
 docs/
   eval_notes.md       # working detail behind the design rationale
 tests/
