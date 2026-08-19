@@ -166,7 +166,19 @@ uv run python -m evaluations.run answer_quality
 Only a system that can be audited can be evaluated. Every agent run produces
 a structured, inspectable record — what tool calls were made, results retrieved,
 and the final answer. That makes it possible to check the agent's work
-at every step, rather than accepting its final answer on faith.
+at every step, rather than accepting its final answer on faith. The design
+decisions that deliver this:
+
+- **Every run returns a full transcript** — tool calls, retrieved results,
+  and the final answer — so evals grade the whole trajectory, never just
+  the answer text.
+- **Judges are auditable too.** Eval reports show the retrieved evidence
+  and each judge's reasoning alongside its verdict, so a grading decision
+  can be checked against what the judge actually saw.
+- **Dependencies are injected**, not hard-coded — tests swap in a fake
+  model or Wikipedia client and check agent behavior offline.
+- **The CLI streams the trail live** — tool calls and the answer appear as
+  they happen, not only in a report afterward.
 
 ### What I Measure and Why
 
@@ -258,23 +270,31 @@ Agent system prompt guidelines:
 
 ### Key Iterations
 
-Most of my iterations were focused on making the agent progressively more auditable:
+Each change below came from an eval run or manual check catching a failure,
+and was verified by re-running. Full before/after detail lives in
+[`docs/eval_notes.md`](docs/eval_notes.md) (Section 4).
 
-- **Agent returns a detailed verifiable audit trail** of tool calls,
-  retrieved results and the final answer. We never just evaluate a final
-  answer.
-- **Made it easy to audit the LLM Judges.** The eval report shows the
-  retrieved evidence and the judge's own reasoning alongside its verdict,
-  so a grading decision can be audited easily, not just the agent's answer.
-  It's critical to audit our LLM judges so we can verify their decisions
-  align with human experts.
-- **Built the agent so it's easy to test in isolation with DI.** Its dependencies
-  (the model, the Wikipedia client) are injected in rather than hard-coded,
-  so tests can swap in a fake and check the agent's behavior directly,
-  without needing a real API key or a live network call.
-- **Made that trail visible in real time in the CLI** — tool calls and the
-  answer stream live as they happen, not just in a report after the run
-  finishes.
+1. **The refusal eval caught the agent searching for unanswerable
+   questions** — several gibberish/unanswerable cases triggered searches,
+   and one crashed exhausting its retry budget. Added one general
+   guideline: decide whether the question is genuinely answerable before
+   searching. Written generically rather than naming the eval's own
+   categories, so it generalizes instead of overfitting to the test set.
+   Re-run: the weak category passed cleanly, and 30/30 cases completed
+   versus 29/30 before.
+2. **Manual testing caught a confidence loophole.** Easy trivia ("What is
+   the capital of France?") produced zero tool calls despite the "always
+   search" instruction — the model read its own confidence as license to
+   skip the tool. Fixed by naming the loophole in the prompt: search even
+   when confident; confidence is not a reason to skip. Re-test: all three
+   trivia probes now make exactly one search each.
+3. **A prompt change that regressed — caught before shipping.** Splitting a
+   bundled guideline into two was clean (86.0% vs the 86.7% baseline,
+   inside the established 85.7–87.8% noise band), but a few-shot example
+   added alongside it silently reverted the confidence fix: 0/3 trivia
+   probes searched. Isolated the cause by testing the split alone (3/3)
+   against split-plus-example (0/3), dropped the example, kept the split —
+   all before spending live eval budget confirming a regression.
 
 ### Future Work
 
