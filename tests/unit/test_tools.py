@@ -15,7 +15,6 @@ from app.tools import (
     WIKIPEDIA_USER_AGENT,
     build_wikipedia_client,
     parse_extract,
-    parse_search_title,
     search_wikipedia,
 )
 from tests.unit.conftest import EXTRACT, TITLE, MediaWiki
@@ -34,7 +33,9 @@ def _client(handler, recorder: list[httpx.Request] | None = None) -> httpx.Clien
 
 
 def _happy(request: httpx.Request) -> httpx.Response:
-    return MediaWiki.search(TITLE) if MediaWiki.is_search(request) else MediaWiki.extract(EXTRACT)
+    if MediaWiki.is_search(request):
+        return MediaWiki.search(TITLE, "Ada (disambiguation)")
+    return MediaWiki.extract(EXTRACT)
 
 
 # --- the wire contract -------------------------------------------------------
@@ -144,19 +145,9 @@ def test_permanent_failures_raise_instead_of_burning_the_retry_budget(tool_conte
         search_wikipedia(tool_context(client), "ada lovelace")
 
 
-# --- pure parsers ------------------------------------------------------------
-
-
-def test_parse_search_title_returns_first_result_title():
-    assert parse_search_title({"query": {"search": [{"title": TITLE}, {"title": "Ada"}]}}) == TITLE
-
-
-def test_parse_search_title_returns_none_when_no_results():
-    assert parse_search_title({"query": {"search": []}}) is None
-
-
-def test_parse_search_title_returns_none_when_title_key_missing():
-    assert parse_search_title({"query": {"search": [{"snippet": "no title field"}]}}) is None
+# --- pure parser -------------------------------------------------------------
+# Only the branch the tests above genuinely cannot reach. Every other parser
+# branch is observable through search_wikipedia and is asserted there instead.
 
 
 def test_parse_extract_skips_blank_extracts_and_returns_the_first_real_one():
@@ -165,7 +156,3 @@ def test_parse_extract_skips_blank_extracts_and_returns_the_first_real_one():
     response_json = {"query": {"pages": {"-1": {"extract": "  "}, "12345": {"extract": EXTRACT}}}}
 
     assert parse_extract(response_json) == EXTRACT
-
-
-def test_parse_extract_returns_none_when_every_extract_is_blank():
-    assert parse_extract({"query": {"pages": {"-1": {"extract": ""}}}}) is None

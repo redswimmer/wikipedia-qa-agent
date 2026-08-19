@@ -302,7 +302,13 @@ to a logging contract and can drift from what the model actually saw).
   `ModelRetry` message can be asserted on its own rather than via a bespoke
   `FunctionModel` per case; the transcript route is still used where the
   retry's *recording* is the point),
-  and the shared `FunctionModel` behaviours. Assert *behaviour*, not census:
+  and the shared `FunctionModel` behaviours. A test that pokes a pure helper or
+  a private function has to earn it: the bar is that mutating what it guards
+  must survive the rest of the suite (mutate the behaviour, deselect the test,
+  re-run — if another test fails, the low-gear one is glue and goes). Prefer
+  making a fake more realistic over keeping a helper test — the search fake
+  returns a runner-up title precisely so "the first result" is observable from
+  the entrypoint. Assert *behaviour*, not census:
   dataset tests check properties (every category present, roughly balanced,
   `MaxToolCalls` budget) rather than exact per-category counts, since pinning
   counts means adding a good case fails the suite. `tests/unit/test_datasets.py`

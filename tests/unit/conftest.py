@@ -44,9 +44,11 @@ def wikipedia_mock_transport() -> httpx.MockTransport:
     """The happy path: any query resolves to the Ada Lovelace article."""
 
     def handler(request: httpx.Request) -> httpx.Response:
-        return (
-            MediaWiki.search(TITLE) if MediaWiki.is_search(request) else MediaWiki.extract(EXTRACT)
-        )
+        if MediaWiki.is_search(request):
+            # More than one hit, best match first: a fake with a single result
+            # can't tell "the first result" from "any result".
+            return MediaWiki.search(TITLE, "Ada (disambiguation)")
+        return MediaWiki.extract(EXTRACT)
 
     return httpx.MockTransport(handler)
 

@@ -1,14 +1,16 @@
 """The CLI entrypoint, driven through `main()` with a fake model and transport.
 
-Previously ten tests asserted on `_progress_parts`/`_text_delta`/`_colorize`
-directly, because `main()` hardcoded its Wikipedia client and the happy path
-was untestable. With `client_factory` injectable, two edge-to-edge tests cover
-the same branches and additionally prove the CLI's output routing.
+Ten tests used to assert on `_progress_parts`/`_text_delta`/`_colorize`
+directly: with only `model_factory` injectable, any path where the model called
+a tool would hit live Wikipedia, so the display logic was reachable only from
+below. With `client_factory` too, these cover the same branches through the
+real entrypoint and additionally pin the output routing and colour rules.
 """
+
+import sys
 
 import httpx
 import pytest
-from pydantic import ValidationError
 from pydantic_ai.messages import (
     ModelMessage,
     ModelResponse,
@@ -16,7 +18,6 @@ from pydantic_ai.messages import (
     TextPart,
     ToolCallPart,
 )
-from pydantic_ai.models import KnownModelName, Model
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 
 from app import query_agent
@@ -89,20 +90,33 @@ def test_main_reports_a_failed_search_as_a_retry_in_the_progress_log(capsys):
     assert captured.out.strip().endswith(EXTRACT)
 
 
-def test_colorize_wraps_text_in_ansi_code_when_enabled():
-    """The only branch the edge-to-edge tests can't reach: capsys is never a tty,
-    so `main()` always takes the colors-disabled path."""
-    assert query_agent._colorize("hi", "\033[2m", enabled=True) == "\033[2mhi\033[0m"
+def test_main_colorizes_only_when_the_stream_is_a_terminal(
+    capsys, monkeypatch, wikipedia_mock_transport
+):
+    """Redirected output must stay clean — escape codes would corrupt
+    `... > answer.txt` — while an interactive terminal gets the highlighting."""
+    piped = _run(capsys, streaming_model(), wikipedia_mock_transport)
+
+    assert "\033[" not in piped.out
+    assert "\033[" not in piped.err
+
+    monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+    colored = _run(capsys, streaming_model(), wikipedia_mock_transport)
+
+    assert "\033[" in colored.out
+    assert "\033[" in colored.err
 
 
-def test_main_exits_with_friendly_message_when_api_key_missing(capsys):
-    def raise_validation_error() -> Model | KnownModelName:
-        raise ValidationError.from_exception_data(
-            "Settings", [{"type": "missing", "loc": ("anthropic_api_key",), "input": {}}]
-        )
+def test_main_exits_with_a_friendly_message_when_the_api_key_is_blank(capsys, monkeypatch):
+    """Runs the real Settings -> resolve_real_model chain, so it also covers the
+    `min_length=1` guard: a blank key is how an unset key usually arrives, and
+    it must fail at startup rather than as a 401 partway through a run. The env
+    var takes precedence over any .env on disk, so this holds locally and in CI."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
 
     with pytest.raises(SystemExit) as exc_info:
-        query_agent.main(["irrelevant question"], model_factory=raise_validation_error)
+        query_agent.main(["irrelevant question"])
 
     assert exc_info.value.code == 1
     assert "ANTHROPIC_API_KEY is not set" in capsys.readouterr().err
