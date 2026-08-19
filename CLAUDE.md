@@ -219,21 +219,38 @@ to a logging contract and can drift from what the model actually saw).
   touched when adding a new dataset, since the dataset name is just an
   argument; loads datasets as `Dataset[str, RunTranscript, Any]` —
   deliberately loose on the metadata type, since each dataset defines its
-  own metadata model and the runner never reads metadata fields itself).
-  `datasets/*.yaml` — one file per eval purpose; cases *and* their
-  evaluator(s) are serialized together via `Dataset.to_file(...)`, so the
-  YAML is self-describing, with an auto-generated `*_schema.json` sibling
-  for IDE autocomplete. Depends only on `app/*`, never `app/query_agent.py`
-  — same rule as `query_agent.py` itself. `results/` — raw `report.print()`
+  own metadata model and the runner never reads metadata fields itself —
+  then attaches that dataset's `LLMJudge` evaluators via
+  `judges.for_dataset(name)`). `judges.py` — maps a dataset name to its
+  `LLMJudge` evaluators, each built by reading a `rubrics/*.md` file
+  verbatim. `rubrics/*.md` — one file per judge rubric, whose *entire*
+  content is the prompt string the judge receives: no headings, no fences,
+  no frontmatter, and read with no strip/templating, so the file a reviewer
+  opens is byte-for-byte what the judge is sent. Editing one edits the live
+  prompt. `safety.md` is shared by both datasets on purpose. (GitHub's
+  rendered view swallows the `<example>` tags — that's expected; don't
+  "fix" it by escaping or fencing, which would change the prompt text.)
+  `datasets/*.yaml` — one file per eval purpose; cases and their
+  *native* evaluators (`MaxToolCalls`/`ToolCorrectness`) are serialized
+  together via `Dataset.to_file(...)`, with an auto-generated
+  `*_schema.json` sibling for IDE autocomplete. `LLMJudge` evaluators are
+  deliberately *not* serialized there — they attach at load time from
+  `rubrics/` instead. When round-tripping a YAML through
+  `from_file`/`to_file`, load it with its real metadata model
+  (`RefusalMetadata`/`HotpotQAMetadata`, not `Any`) or the regenerated
+  schema silently loses the metadata types, and re-add the hand-written
+  `#` header comments, which `to_file` drops. Depends only on `app/*`,
+  never `app/query_agent.py` — same rule as `query_agent.py` itself. `results/` — raw `report.print()`
   output from notable live runs, committed on purpose (not gitignored):
   reviewers don't have an API key to run evals themselves, so these are the
   only live evidence they see. Capture with the wide-`COLUMNS` invocation
   above; findings worth a reviewer's attention get distilled from these into
   `eval_notes.md`/README, not left as raw files for someone to dig through.
-  `judge_rubrics.md` — reviewer-facing reading copy of every prompt in the
-  system (agent system prompt + every judge rubric, extracted verbatim).
-  It has no sync test, deliberately: if you change `app/prompts.py` or any
-  rubric in a dataset YAML, update this page by hand in the same change.
+  `judge_rubrics.md` — reviewer-facing index of every prompt in the system:
+  the shared judging design, a link to `app/prompts.py` for the agent
+  system prompt, and a table linking each `rubrics/*.md` file. It holds no
+  prompt text itself (the rubric files are the source of truth), so it only
+  needs updating when a rubric is added, removed, or renamed.
 - OpenTelemetry/Logfire: `app/agent.py` sets `agent.instrument = True` on
   the shared `agent` object (harmless without a configured tracer — spans
   go to a no-op provider; only `evaluations/run.py` actually configures one,

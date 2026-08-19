@@ -15,6 +15,7 @@ from tenacity import stop_after_attempt, wait_exponential
 
 from app.config import Settings
 from app.runner import RunTranscript
+from evaluations import judges
 from evaluations.task import production_task
 
 # Local-only unless LOGFIRE_TOKEN is set — required for span-based evaluators
@@ -88,6 +89,11 @@ def main(argv: list[str] | None = None) -> None:
     # model (see evaluations/models.py) and nothing in this generic runner reads
     # metadata fields, so it doesn't need to know which shape a given dataset uses.
     dataset = Dataset[str, RunTranscript, Any].from_file(dataset_path)
+    # The LLMJudge evaluators aren't serialized in the YAML: their rubrics live in
+    # evaluations/rubrics/*.md so the file a reviewer reads is byte-for-byte the
+    # prompt the judge receives. Attached here, keyed by the dataset name that's
+    # already this runner's only argument.
+    dataset.evaluators.extend(judges.for_dataset(args.dataset_name))
     try:
         with production_task() as answer_question:
             # Unbounded concurrency previously caused 46-50% of answer_quality's 50

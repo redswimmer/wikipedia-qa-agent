@@ -1,6 +1,8 @@
 """Confirms each committed dataset YAML actually loads with its real evaluators
 and metadata type — a renamed evaluator, YAML typo, or Literal drift would
-otherwise pass ruff+ty+pytest silently and only surface on a live eval run."""
+otherwise pass ruff+ty+pytest silently and only surface on a live eval run.
+The LLMJudge evaluators live outside the YAML (see evaluations/judges.py), so
+they're attached here the same way evaluations/run.py attaches them."""
 
 from collections import Counter
 from pathlib import Path
@@ -9,6 +11,7 @@ from pydantic_evals import Dataset
 from pydantic_evals.evaluators import LLMJudge
 
 from app.runner import RunTranscript
+from evaluations import judges
 from evaluations.models import HotpotQAMetadata, RefusalMetadata
 
 
@@ -63,6 +66,8 @@ def test_answer_quality_dataset_loads():
         assert case.metadata.level == "hard"
         assert isinstance(case.expected_output, RunTranscript)
         assert case.expected_output.answer != ""
+
+    dataset.evaluators.extend(judges.for_dataset("answer_quality"))
 
     assert len(dataset.evaluators) == 6
     judge_names = {

@@ -107,8 +107,11 @@ I chose to grade the agent along two dimensions in order to evaluate correctness
 2. Answer quality
 
 > **Reviewing the prompts?** Every prompt in the system — the agent's
-> system prompt and every LLM-judge rubric — is collected verbatim on
-> one page: [`evaluations/judge_rubrics.md`](evaluations/judge_rubrics.md).
+> system prompt and every LLM-judge rubric — is indexed on one page:
+> [`evaluations/judge_rubrics.md`](evaluations/judge_rubrics.md). Each
+> rubric is its own file under
+> [`evaluations/rubrics/`](evaluations/rubrics/), read verbatim at runtime
+> by the judge that uses it.
 
 ### Refusal
 
@@ -196,17 +199,20 @@ scores look precise but aren't reproducible: annotators (and judges) rarely
 agree on the line between a 3 and a 4, so that noise just gets inherited.
 Each rubric ships a few labeled Pass/Fail examples with a worked critique, 
 and judging is done by a stronger, separate model (Claude Opus) than the 
-one being tested (Claude Sonnet), to reduce self-grading bias. The
-rubrics are collected verbatim in
-[`evaluations/judge_rubrics.md`](evaluations/judge_rubrics.md).
+one being tested (Claude Sonnet), to reduce self-grading bias. Each rubric is
+its own file under [`evaluations/rubrics/`](evaluations/rubrics/), loaded
+verbatim at runtime, so the text you read is exactly the text the judge
+receives; [`evaluations/judge_rubrics.md`](evaluations/judge_rubrics.md)
+indexes them.
 
 #### Agent System Prompt
 
 Follows Anthropic's own [prompt-engineering guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices): direct, unambiguous
 instructions, one guideline per behavior, and a concrete example over an
 abstract description. The full prompt text lives in
-[`app/prompts.py`](app/prompts.py) (also reproduced in
-[`evaluations/judge_rubrics.md`](evaluations/judge_rubrics.md)).
+[`app/prompts.py`](app/prompts.py) (linked from
+[`evaluations/judge_rubrics.md`](evaluations/judge_rubrics.md) alongside
+the judge rubrics).
 
 Agent system prompt guidelines:
 
