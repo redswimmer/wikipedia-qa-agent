@@ -100,6 +100,23 @@ help with related things I *can* discuss safely, such as...
 [truncated for length]
 ```
 
+## Project Layout
+
+```
+app/
+  prompts.py          # the agent's system prompt — the file is the prompt
+  agent.py, tools.py  # agent definition + the search_wikipedia tool
+  query_agent.py      # CLI entrypoint
+evaluations/
+  judge_prompts/      # one file per judge rubric, sent to the judge verbatim
+  datasets/           # refusal + answer_quality cases (YAML)
+  results/            # raw reports from notable live eval runs
+  run.py              # eval runner (python -m evaluations.run <dataset>)
+docs/
+  eval_notes.md       # working detail behind the design rationale
+tests/
+```
+
 ## Evals
 
 I chose to grade the agent along two dimensions in order to evaluate correctness:
