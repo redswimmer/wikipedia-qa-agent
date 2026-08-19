@@ -1,3 +1,10 @@
+"""`run_agent`/`run_agent_streaming` driven edge-to-edge through the real agent
+with a fake model and transport.
+
+These assert the auditability contract: the transcript must record what the
+model actually did, including the calls that failed.
+"""
+
 import asyncio
 
 import httpx
@@ -16,49 +23,55 @@ from pydantic_ai.messages import (
     TextPart,
     ToolCallPart,
 )
-from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
+from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from app.agent import agent
 from app.runner import run_agent, run_agent_streaming
+from tests.unit.conftest import (
+    EXTRACT,
+    TITLE,
+    MediaWiki,
+    search_then_answer,
+    streaming_model,
+)
 
 
-def _search_then_answer(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-    if len(messages) == 1:
-        return ModelResponse(
-            parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": "Ada Lovelace"})]
-        )
-    return ModelResponse(parts=[TextPart(content="Ada Lovelace was a mathematician.")])
+def _search(query: str) -> ModelResponse:
+    return ModelResponse(parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": query})])
 
 
 def _answer_without_searching(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
     return ModelResponse(parts=[TextPart(content="4")])
 
 
-def _always_fail_search(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-    return ModelResponse(
-        parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": "nonexistent"})]
-    )
+def _always_search(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    return _search("nonexistent")
 
 
-def _fake_no_results_transport(request: httpx.Request) -> httpx.Response:
-    return httpx.Response(200, json={"query": {"search": []}})
+def _search_then_give_up(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    """Answers once the tool has pushed back, so the retry lands in the transcript
+    instead of the run dying on an exhausted retry budget."""
+    if isinstance(messages[-1].parts[-1], RetryPromptPart):
+        return ModelResponse(parts=[TextPart(content="I couldn't retrieve that.")])
+    return _search("anything")
 
 
 def test_run_agent_records_tool_call_and_answer(wikipedia_mock_transport):
     with httpx.Client(transport=wikipedia_mock_transport) as client:
         transcript = run_agent(
-            agent, "Who was Ada Lovelace?", deps=client, model=FunctionModel(_search_then_answer)
+            agent, "Who was Ada Lovelace?", deps=client, model=FunctionModel(search_then_answer)
         )
 
     assert transcript.question == "Who was Ada Lovelace?"
     assert len(transcript.tool_calls) == 1
     assert transcript.tool_calls[0].tool_name == "search_wikipedia"
-    assert transcript.tool_calls[0].args == {"query": "Ada Lovelace"}
-    assert transcript.tool_calls[0].result == "Ada Lovelace was a mathematician."
-    assert transcript.answer == "Ada Lovelace was a mathematician."
+    assert transcript.tool_calls[0].args == {"query": TITLE}
+    assert transcript.tool_calls[0].result == EXTRACT
+    assert transcript.answer == EXTRACT
 
 
 def test_run_agent_with_no_tool_call_has_empty_tool_calls(wikipedia_mock_transport):
+    """No fabricated records when the model answers directly."""
     with httpx.Client(transport=wikipedia_mock_transport) as client:
         transcript = run_agent(
             agent, "What is 2 + 2?", deps=client, model=FunctionModel(_answer_without_searching)
@@ -69,110 +82,78 @@ def test_run_agent_with_no_tool_call_has_empty_tool_calls(wikipedia_mock_transpo
 
 
 def test_run_agent_propagates_exhausted_retries():
+    """Callers decide how to handle failure, so the error isn't swallowed."""
     with (
         pytest.raises(UnexpectedModelBehavior),
-        httpx.Client(transport=httpx.MockTransport(_fake_no_results_transport)) as client,
+        httpx.Client(transport=httpx.MockTransport(lambda _: MediaWiki.search())) as client,
     ):
-        run_agent(agent, "Who is nobody?", deps=client, model=FunctionModel(_always_fail_search))
+        run_agent(agent, "Who is nobody?", deps=client, model=FunctionModel(_always_search))
 
 
-def _always_search(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-    return ModelResponse(parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": "x"})])
-
-
-def _rate_limited_transport(request: httpx.Request) -> httpx.Response:
-    return httpx.Response(429, json={})
-
-
-def test_run_agent_treats_429_as_retry_not_crash():
-    with (
-        pytest.raises(UnexpectedModelBehavior),
-        httpx.Client(transport=httpx.MockTransport(_rate_limited_transport)) as client,
-    ):
-        run_agent(agent, "who knows", deps=client, model=FunctionModel(_always_search))
-
-
-def _search_fails_then_succeeds(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-    last_part = messages[-1].parts[-1]
-    if isinstance(last_part, RetryPromptPart):
-        return ModelResponse(
-            parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": "Ada Lovelace"})]
+def test_run_agent_records_a_rate_limit_as_a_retry_the_model_can_read():
+    """A 429 must reach the model as a ModelRetry it can act on — not an
+    HTTPStatusError that kills the run — and must be visible in the transcript."""
+    with httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(429, json={}))) as c:
+        transcript = run_agent(
+            agent, "who knows", deps=c, model=FunctionModel(_search_then_give_up)
         )
-    if len(messages) == 1:
-        return ModelResponse(
-            parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": "nonexistent"})]
-        )
-    return ModelResponse(parts=[TextPart(content="Ada Lovelace was a mathematician.")])
 
-
-def _fake_transport_fails_once_then_succeeds(request: httpx.Request) -> httpx.Response:
-    if "srsearch=nonexistent" in str(request.url):
-        return httpx.Response(200, json={"query": {"search": []}})
-    if "list=search" in str(request.url):
-        return httpx.Response(200, json={"query": {"search": [{"title": "Ada Lovelace"}]}})
-    return httpx.Response(
-        200, json={"query": {"pages": {"1": {"extract": "Ada Lovelace was a mathematician."}}}}
+    assert (
+        transcript.tool_calls[0].result == "[retry] Wikipedia returned 429; try again in a moment."
     )
+    assert transcript.answer == "I couldn't retrieve that."
 
 
 def test_run_agent_records_failed_retry_before_successful_call():
-    with httpx.Client(
-        transport=httpx.MockTransport(_fake_transport_fails_once_then_succeeds)
-    ) as client:
+    def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        if isinstance(messages[-1].parts[-1], RetryPromptPart):
+            return _search(TITLE)
+        if len(messages) == 1:
+            return _search("nonexistent")
+        return ModelResponse(parts=[TextPart(content=EXTRACT)])
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if MediaWiki.is_search(request):
+            return (
+                MediaWiki.search()
+                if "srsearch=nonexistent" in str(request.url)
+                else MediaWiki.search(TITLE)
+            )
+        return MediaWiki.extract(EXTRACT)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         transcript = run_agent(
-            agent,
-            "Who was Ada Lovelace?",
-            deps=client,
-            model=FunctionModel(_search_fails_then_succeeds),
+            agent, "Who was Ada Lovelace?", deps=client, model=FunctionModel(model)
         )
 
-    assert len(transcript.tool_calls) == 2
-    assert transcript.tool_calls[0].tool_name == "search_wikipedia"
-    assert transcript.tool_calls[0].args == {"query": "nonexistent"}
+    assert [c.args["query"] for c in transcript.tool_calls] == ["nonexistent", TITLE]
     assert transcript.tool_calls[0].result.startswith("[retry]")
-    assert transcript.tool_calls[1].tool_name == "search_wikipedia"
-    assert transcript.tool_calls[1].args == {"query": "Ada Lovelace"}
-    assert transcript.tool_calls[1].result == "Ada Lovelace was a mathematician."
+    assert transcript.tool_calls[1].result == EXTRACT
 
 
-async def _search_then_answer_stream(messages: list[ModelMessage], info: AgentInfo):
-    if len(messages) == 1:
-        yield {0: DeltaToolCall(name="search_wikipedia", json_args='{"query": "Ada Lovelace"}')}
-    else:
-        yield "Ada Lovelace was a mathematician."
-
-
-def test_run_agent_streaming_records_tool_call_and_answer_and_emits_events(
-    wikipedia_mock_transport,
-):
+def test_run_agent_streaming_records_the_same_transcript_and_emits_events(wikipedia_mock_transport):
     received: list[AgentStreamEvent] = []
 
     async def collect(ctx: RunContext, events) -> None:
         async for event in events:
             received.append(event)
 
-    async def run() -> None:
+    async def run():
         with httpx.Client(transport=wikipedia_mock_transport) as client:
-            transcript = await run_agent_streaming(
+            return await run_agent_streaming(
                 agent,
                 "Who was Ada Lovelace?",
                 deps=client,
-                model=FunctionModel(
-                    _search_then_answer, stream_function=_search_then_answer_stream
-                ),
+                model=streaming_model(),
                 event_stream_handler=collect,
             )
 
-        assert transcript.question == "Who was Ada Lovelace?"
-        assert len(transcript.tool_calls) == 1
-        assert transcript.tool_calls[0].tool_name == "search_wikipedia"
-        assert transcript.tool_calls[0].result == "Ada Lovelace was a mathematician."
-        assert transcript.answer == "Ada Lovelace was a mathematician."
+    transcript = asyncio.run(run())
 
-    asyncio.run(run())
-
-    call_events = [e for e in received if isinstance(e, FunctionToolCallEvent)]
-    result_events = [e for e in received if isinstance(e, FunctionToolResultEvent)]
-    assert len(call_events) == 1
-    assert call_events[0].part.tool_name == "search_wikipedia"
-    assert len(result_events) == 1
+    assert [c.tool_name for c in transcript.tool_calls] == ["search_wikipedia"]
+    assert transcript.tool_calls[0].result == EXTRACT
+    assert transcript.answer == EXTRACT
+    assert [e.part.tool_name for e in received if isinstance(e, FunctionToolCallEvent)] == [
+        "search_wikipedia"
+    ]
+    assert len([e for e in received if isinstance(e, FunctionToolResultEvent)]) == 1

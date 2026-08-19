@@ -1,117 +1,98 @@
-import asyncio
-from typing import cast
+"""The CLI entrypoint, driven through `main()` with a fake model and transport.
 
+Previously ten tests asserted on `_progress_parts`/`_text_delta`/`_colorize`
+directly, because `main()` hardcoded its Wikipedia client and the happy path
+was untestable. With `client_factory` injectable, two edge-to-edge tests cover
+the same branches and additionally prove the CLI's output routing.
+"""
+
+import httpx
 import pytest
 from pydantic import ValidationError
-from pydantic_ai import FunctionToolCallEvent, FunctionToolResultEvent, RunContext
 from pydantic_ai.messages import (
-    PartDeltaEvent,
-    PartStartEvent,
+    ModelMessage,
+    ModelResponse,
     RetryPromptPart,
     TextPart,
-    TextPartDelta,
     ToolCallPart,
-    ToolReturnPart,
 )
 from pydantic_ai.models import KnownModelName, Model
+from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 
 from app import query_agent
+from tests.unit.conftest import EXTRACT, TITLE, MediaWiki, streaming_model
 
 
-def test_progress_parts_for_tool_call():
-    event = FunctionToolCallEvent(
-        part=ToolCallPart(
-            tool_name="search_wikipedia", args={"query": "Ada Lovelace"}, tool_call_id="1"
-        )
+def _run(capsys, model, transport):
+    query_agent.main(
+        ["Who was Ada Lovelace?"],
+        model_factory=lambda: model,
+        client_factory=lambda: httpx.Client(transport=transport),
+    )
+    return capsys.readouterr()
+
+
+def test_main_streams_the_answer_to_stdout_and_tool_progress_to_stderr(
+    capsys, wikipedia_mock_transport
+):
+    captured = _run(capsys, streaming_model(), wikipedia_mock_transport)
+
+    # Answer on stdout, under a single header, with the deltas in order.
+    assert "Answer:" in captured.out
+    assert captured.out.count("Answer:") == 1
+    assert captured.out.strip().endswith(EXTRACT)
+
+    # Tool progress on stderr only, so `... > answer.txt` captures just the answer.
+    assert "Answer:" not in captured.err
+    assert "Tool calls:" in captured.err
+    assert f"→ search_wikipedia(query='{TITLE}')" in captured.err
+    assert f"← {EXTRACT}" in captured.err
+
+
+def test_main_reports_a_failed_search_as_a_retry_in_the_progress_log(capsys):
+    """The `RetryPromptPart` branch: a search that finds nothing is surfaced to
+    the user rather than silently swallowed before the successful retry."""
+
+    def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        if isinstance(messages[-1].parts[-1], RetryPromptPart):
+            return ModelResponse(
+                parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": TITLE})]
+            )
+        if len(messages) == 1:
+            return ModelResponse(
+                parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": "zzz"})]
+            )
+        return ModelResponse(parts=[TextPart(content=EXTRACT)])
+
+    async def stream(messages: list[ModelMessage], info: AgentInfo):
+        response = model(messages, info)
+        part = response.parts[0]
+        if isinstance(part, ToolCallPart):
+            yield {0: DeltaToolCall(name=part.tool_name, json_args=part.args_as_json_str())}
+        else:
+            yield EXTRACT
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if MediaWiki.is_search(request):
+            return (
+                MediaWiki.search()
+                if "srsearch=zzz" in str(request.url)
+                else MediaWiki.search(TITLE)
+            )
+        return MediaWiki.extract(EXTRACT)
+
+    captured = _run(
+        capsys, FunctionModel(model, stream_function=stream), httpx.MockTransport(handler)
     )
 
-    assert query_agent._progress_parts(event) == ("→", "search_wikipedia(query='Ada Lovelace')")
-
-
-def test_progress_parts_for_tool_result():
-    event = FunctionToolResultEvent(
-        part=ToolReturnPart(
-            tool_name="search_wikipedia",
-            content="Ada Lovelace was a mathematician.",
-            tool_call_id="1",
-        )
-    )
-
-    assert query_agent._progress_parts(event) == ("←", "Ada Lovelace was a mathematician.")
-
-
-def test_progress_parts_for_retried_tool_result():
-    event = FunctionToolResultEvent(
-        part=RetryPromptPart(
-            tool_name="search_wikipedia", content="No article found", tool_call_id="1"
-        )
-    )
-
-    assert query_agent._progress_parts(event) == ("←", "[retry] No article found")
-
-
-def test_progress_parts_for_unrelated_event_is_none():
-    event = PartStartEvent(index=0, part=TextPart(content="hi"))
-
-    assert query_agent._progress_parts(event) is None
-
-
-def test_text_delta_extracts_content_from_text_part_delta():
-    event = PartDeltaEvent(index=0, delta=TextPartDelta(content_delta="Ada Love"))
-
-    assert query_agent._text_delta(event) == "Ada Love"
-
-
-def test_text_delta_extracts_initial_content_from_part_start_event():
-    event = PartStartEvent(index=0, part=TextPart(content="Ada Lovelace (born"))
-
-    assert query_agent._text_delta(event) == "Ada Lovelace (born"
-
-
-def test_text_delta_for_part_start_event_with_tool_call_part_is_none():
-    event = PartStartEvent(
-        index=0, part=ToolCallPart(tool_name="search_wikipedia", args={}, tool_call_id="1")
-    )
-
-    assert query_agent._text_delta(event) is None
-
-
-def test_text_delta_for_unrelated_event_is_none():
-    event = FunctionToolCallEvent(
-        part=ToolCallPart(tool_name="search_wikipedia", args={}, tool_call_id="1")
-    )
-
-    assert query_agent._text_delta(event) is None
+    assert "← [retry] No Wikipedia article found" in captured.err
+    assert captured.out.strip().endswith(EXTRACT)
 
 
 def test_colorize_wraps_text_in_ansi_code_when_enabled():
+    """The only branch the edge-to-edge tests can't reach: capsys is never a tty,
+    so `main()` always takes the colors-disabled path."""
     assert query_agent._colorize("hi", "\033[2m", enabled=True) == "\033[2mhi\033[0m"
-
-
-def test_colorize_returns_plain_text_when_disabled():
-    assert query_agent._colorize("hi", "\033[2m", enabled=False) == "hi"
-
-
-def test_print_progress_streams_text_deltas_to_stdout_and_tool_events_to_stderr(capsys):
-    events = [
-        FunctionToolCallEvent(
-            part=ToolCallPart(
-                tool_name="search_wikipedia", args={"query": "Ada Lovelace"}, tool_call_id="1"
-            )
-        ),
-        PartDeltaEvent(index=0, delta=TextPartDelta(content_delta="Ada")),
-        PartDeltaEvent(index=0, delta=TextPartDelta(content_delta=" Lovelace")),
-    ]
-
-    async def event_stream():
-        for event in events:
-            yield event
-
-    asyncio.run(query_agent._print_progress(cast(RunContext, None), event_stream()))
-
-    captured = capsys.readouterr()
-    assert captured.out == "\nAnswer:\nAda Lovelace"
-    assert captured.err == "Tool calls:\n  → search_wikipedia(query='Ada Lovelace')\n"
 
 
 def test_main_exits_with_friendly_message_when_api_key_missing(capsys):

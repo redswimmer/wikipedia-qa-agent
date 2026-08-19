@@ -14,10 +14,16 @@ WIKIPEDIA_USER_AGENT = (
 )
 
 
-def build_wikipedia_client(timeout: float = 30.0) -> httpx.Client:
+def build_wikipedia_client(
+    timeout: float = 30.0, transport: httpx.BaseTransport | None = None
+) -> httpx.Client:
     """A correctly-configured but unopened client for calling search_wikipedia.
-    Lifecycle (open/close) stays with the caller."""
-    return httpx.Client(headers={"User-Agent": WIKIPEDIA_USER_AGENT}, timeout=timeout)
+    Lifecycle (open/close) stays with the caller. `transport` exists so tests
+    exercise this real factory against a fake transport, rather than building
+    their own client and never checking what production actually configures."""
+    return httpx.Client(
+        headers={"User-Agent": WIKIPEDIA_USER_AGENT}, timeout=timeout, transport=transport
+    )
 
 
 def parse_search_title(response_json: dict) -> str | None:

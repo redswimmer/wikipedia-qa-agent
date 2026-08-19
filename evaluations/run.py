@@ -11,6 +11,7 @@ import logfire
 from pydantic import ValidationError
 from pydantic_ai.retries import RetryConfig
 from pydantic_evals import Dataset
+from rich.markup import escape
 from tenacity import stop_after_attempt, wait_exponential
 
 from app.config import Settings
@@ -40,12 +41,13 @@ def _format_transcript(transcript: RunTranscript) -> str:
     """LLMJudge evaluators already grade against this full transcript (see
     app/runner.py); this surfaces the same evidence in the printed report so
     a verdict can be checked by eye instead of via Logfire."""
-    sections = [f"Answer:\n{transcript.answer}"]
+    sections = [f"Answer:\n{escape(transcript.answer)}"]
     if transcript.tool_calls:
-        # No square brackets in labels: Rich's Table treats "[...]" as markup
-        # and silently drops anything it doesn't recognize as a valid style.
+        # Rich's Table parses "[...]" as markup and silently drops anything it
+        # doesn't recognise as a style — which ate every "[retry]" marker
+        # app/runner.py writes. Escape the data; the labels have no brackets.
         calls = "\n\n".join(
-            f"{call.tool_name} → {call.args.get('query', call.args)!r}:\n{call.result}"
+            escape(f"{call.tool_name} → {call.args.get('query', call.args)!r}:\n{call.result}")
             for call in transcript.tool_calls
         )
         sections.append(f"Tool Calls:\n{calls}")
