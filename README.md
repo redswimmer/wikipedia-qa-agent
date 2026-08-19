@@ -107,7 +107,7 @@ app/
   prompts.py          # the agent's system prompt — the file is the prompt
   agent.py, tools.py  # agent definition + the search_wikipedia tool
   runner.py           # shared entry point for CLI and evals; returns the audit transcript
-  query_agent.py      # CLI
+  query_agent.py      # CLI for asking the agent a question
 evaluations/
   judge_prompts/      # one file per judge rubric, sent verbatim
   datasets/           # refusal + answer_quality cases
