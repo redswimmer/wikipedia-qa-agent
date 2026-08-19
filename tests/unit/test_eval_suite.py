@@ -14,7 +14,7 @@ from app.config import Settings
 from evaluations import judges
 from evaluations.run import DATASETS_DIR
 from evaluations.task import production_task
-from tests.unit.fakes import EXTRACT, TITLE, search_then_answer
+from tests.unit.fakes import EXTRACT, TITLE, search_then_answer, wikipedia_handler
 
 
 def _names(evaluators: list[LLMJudge]) -> set[str]:
@@ -81,6 +81,29 @@ def test_production_task_runs_a_question_through_the_real_agent(wikipedia_mock_t
     assert [c.tool_name for c in transcript.tool_calls] == ["search_wikipedia"]
     assert transcript.tool_calls[0].args == {"query": TITLE}
     assert transcript.answer == EXTRACT
+
+
+def test_production_task_reuses_one_client_across_cases(wikipedia_mock_transport):
+    """Why this is a contextmanager at all: one client is opened per run and
+    reused by every case, for connection pooling. Building a client per question
+    would open and discard a fresh connection pool 50 times a dataset."""
+    seen: list[httpx.Request] = []
+    route = wikipedia_handler()
+
+    def recording(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return route(request)
+
+    with (
+        httpx.Client(transport=httpx.MockTransport(recording)) as client,
+        production_task(model=FunctionModel(search_then_answer), client=client) as answer,
+    ):
+        answer("Who was Ada Lovelace?")
+        after_first_case = len(seen)
+        answer("Who was Ada Lovelace?")
+
+    assert after_first_case == 2  # one search + one extract
+    assert len(seen) == 4  # the second case went through that same client
 
 
 def test_production_task_leaves_an_injected_client_open_for_its_owner(wikipedia_mock_transport):
