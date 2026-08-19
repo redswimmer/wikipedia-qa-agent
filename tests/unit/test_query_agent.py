@@ -1,127 +1,106 @@
-import asyncio
-from typing import cast
+"""The CLI entrypoint, driven through `main()` with a fake model and transport.
 
+Covers what a user sees: the answer streamed to stdout, tool progress to
+stderr, retries surfaced rather than swallowed, and colour only on a terminal.
+"""
+
+import sys
+
+import httpx
 import pytest
-from pydantic import ValidationError
-from pydantic_ai import FunctionToolCallEvent, FunctionToolResultEvent, RunContext
 from pydantic_ai.messages import (
-    PartDeltaEvent,
-    PartStartEvent,
+    ModelMessage,
+    ModelResponse,
     RetryPromptPart,
     TextPart,
-    TextPartDelta,
     ToolCallPart,
-    ToolReturnPart,
 )
-from pydantic_ai.models import KnownModelName, Model
+from pydantic_ai.models import Model
+from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 
 from app import query_agent
+from tests.unit.fakes import EXTRACT, TITLE, streaming_model, wikipedia_handler
 
 
-def test_progress_parts_for_tool_call():
-    event = FunctionToolCallEvent(
-        part=ToolCallPart(
-            tool_name="search_wikipedia", args={"query": "Ada Lovelace"}, tool_call_id="1"
-        )
+def _run(capsys, model: Model, transport: httpx.BaseTransport):
+    query_agent.main(
+        ["Who was Ada Lovelace?"],
+        model_factory=lambda: model,
+        client_factory=lambda: httpx.Client(transport=transport),
     )
-
-    assert query_agent._progress_parts(event) == ("→", "search_wikipedia(query='Ada Lovelace')")
-
-
-def test_progress_parts_for_tool_result():
-    event = FunctionToolResultEvent(
-        part=ToolReturnPart(
-            tool_name="search_wikipedia",
-            content="Ada Lovelace was a mathematician.",
-            tool_call_id="1",
-        )
-    )
-
-    assert query_agent._progress_parts(event) == ("←", "Ada Lovelace was a mathematician.")
+    return capsys.readouterr()
 
 
-def test_progress_parts_for_retried_tool_result():
-    event = FunctionToolResultEvent(
-        part=RetryPromptPart(
-            tool_name="search_wikipedia", content="No article found", tool_call_id="1"
-        )
-    )
+def test_main_streams_the_answer_to_stdout_and_tool_progress_to_stderr(
+    capsys, wikipedia_mock_transport
+):
+    captured = _run(capsys, streaming_model(), wikipedia_mock_transport)
 
-    assert query_agent._progress_parts(event) == ("←", "[retry] No article found")
+    assert "Answer:" in captured.out
+    assert captured.out.count("Answer:") == 1  # header printed once, not per delta
+    assert captured.out.strip().endswith(EXTRACT)
 
-
-def test_progress_parts_for_unrelated_event_is_none():
-    event = PartStartEvent(index=0, part=TextPart(content="hi"))
-
-    assert query_agent._progress_parts(event) is None
-
-
-def test_text_delta_extracts_content_from_text_part_delta():
-    event = PartDeltaEvent(index=0, delta=TextPartDelta(content_delta="Ada Love"))
-
-    assert query_agent._text_delta(event) == "Ada Love"
+    # Progress on stderr only, so `... > answer.txt` captures just the answer.
+    assert "Answer:" not in captured.err
+    assert "Tool calls:" in captured.err
+    assert f"→ search_wikipedia(query='{TITLE}')" in captured.err
+    assert f"← {EXTRACT}" in captured.err
 
 
-def test_text_delta_extracts_initial_content_from_part_start_event():
-    event = PartStartEvent(index=0, part=TextPart(content="Ada Lovelace (born"))
+def test_main_reports_a_failed_search_as_a_retry_in_the_progress_log(capsys):
+    """A search that finds nothing is surfaced to the user rather than silently
+    swallowed before the successful retry."""
 
-    assert query_agent._text_delta(event) == "Ada Lovelace (born"
-
-
-def test_text_delta_for_part_start_event_with_tool_call_part_is_none():
-    event = PartStartEvent(
-        index=0, part=ToolCallPart(tool_name="search_wikipedia", args={}, tool_call_id="1")
-    )
-
-    assert query_agent._text_delta(event) is None
-
-
-def test_text_delta_for_unrelated_event_is_none():
-    event = FunctionToolCallEvent(
-        part=ToolCallPart(tool_name="search_wikipedia", args={}, tool_call_id="1")
-    )
-
-    assert query_agent._text_delta(event) is None
-
-
-def test_colorize_wraps_text_in_ansi_code_when_enabled():
-    assert query_agent._colorize("hi", "\033[2m", enabled=True) == "\033[2mhi\033[0m"
-
-
-def test_colorize_returns_plain_text_when_disabled():
-    assert query_agent._colorize("hi", "\033[2m", enabled=False) == "hi"
-
-
-def test_print_progress_streams_text_deltas_to_stdout_and_tool_events_to_stderr(capsys):
-    events = [
-        FunctionToolCallEvent(
-            part=ToolCallPart(
-                tool_name="search_wikipedia", args={"query": "Ada Lovelace"}, tool_call_id="1"
+    def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        if isinstance(messages[-1].parts[-1], RetryPromptPart):
+            return ModelResponse(
+                parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": TITLE})]
             )
-        ),
-        PartDeltaEvent(index=0, delta=TextPartDelta(content_delta="Ada")),
-        PartDeltaEvent(index=0, delta=TextPartDelta(content_delta=" Lovelace")),
-    ]
+        if len(messages) == 1:
+            return ModelResponse(
+                parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": "zzz"})]
+            )
+        return ModelResponse(parts=[TextPart(content=EXTRACT)])
 
-    async def event_stream():
-        for event in events:
-            yield event
+    async def stream(messages: list[ModelMessage], info: AgentInfo):
+        part = model(messages, info).parts[0]
+        if isinstance(part, ToolCallPart):
+            yield {0: DeltaToolCall(name=part.tool_name, json_args=part.args_as_json_str())}
+        else:
+            yield EXTRACT
 
-    asyncio.run(query_agent._print_progress(cast(RunContext, None), event_stream()))
+    transport = httpx.MockTransport(wikipedia_handler(no_results_for=("zzz",)))
+    captured = _run(capsys, FunctionModel(model, stream_function=stream), transport)
 
-    captured = capsys.readouterr()
-    assert captured.out == "\nAnswer:\nAda Lovelace"
-    assert captured.err == "Tool calls:\n  → search_wikipedia(query='Ada Lovelace')\n"
+    assert "← [retry] No Wikipedia article found" in captured.err
+    assert captured.out.strip().endswith(EXTRACT)
 
 
-def test_main_exits_with_friendly_message_when_api_key_missing(capsys):
-    def raise_validation_error() -> Model | KnownModelName:
-        raise ValidationError.from_exception_data(
-            "Settings", [{"type": "missing", "loc": ("anthropic_api_key",), "input": {}}]
-        )
+@pytest.mark.parametrize("is_terminal", [False, True])
+def test_main_colorizes_only_when_the_stream_is_a_terminal(
+    capsys, monkeypatch, wikipedia_mock_transport, is_terminal
+):
+    """Redirected output must stay clean — escape codes would corrupt
+    `... > answer.txt` — while an interactive terminal gets the highlighting."""
+    if is_terminal:
+        monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
+        monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+
+    captured = _run(capsys, streaming_model(), wikipedia_mock_transport)
+
+    assert ("\033[" in captured.out) is is_terminal
+    assert ("\033[" in captured.err) is is_terminal
+
+
+def test_main_exits_with_a_friendly_message_when_the_api_key_is_blank(capsys, monkeypatch):
+    """Runs the real Settings -> resolve_real_model chain, so this also covers
+    the `min_length=1` guard: a blank key is how an unset key usually arrives,
+    and it must fail at startup rather than as a 401 partway through a run. The
+    env var beats any .env on disk, so this holds locally and in CI alike."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
 
     with pytest.raises(SystemExit) as exc_info:
-        query_agent.main(["irrelevant question"], model_factory=raise_validation_error)
+        query_agent.main(["irrelevant question"])
 
     assert exc_info.value.code == 1
     assert "ANTHROPIC_API_KEY is not set" in capsys.readouterr().err

@@ -32,7 +32,7 @@ uv run ruff check .              # lint
 uv run ruff format .             # format
 uv run ty check                  # type check
 uv run pytest                    # full test suite
-uv run pytest tests/unit/test_app_imports.py::test_app_modules_import  # single test
+uv run pytest tests/unit/test_tools.py  # one file
 uv run pre-commit run --all-files  # run every quality gate without committing
 
 uv run python -m app.query_agent "your question"  # ask a question
@@ -180,6 +180,10 @@ to a logging contract and can drift from what the model actually saw).
   read from `.env`).
 - `app/tools.py` — the `search_wikipedia` tool: MediaWiki search + extract
   retrieval (functional core / imperative shell split within the module).
+  `build_wikipedia_client()` takes an optional `transport` so tests drive the
+  *real* factory against an `httpx.MockTransport` — that's what makes the
+  User-Agent and request parameters assertable on the wire instead of only
+  on a client object the test built itself.
 - `app/prompts.py` — the agent's system prompt.
 - `app/agent.py` — the module-level `agent` (registers `search_wikipedia`,
   no model bound). Provider-agnostic: no `Settings`/`.env` dependency, no
@@ -200,6 +204,11 @@ to a logging contract and can drift from what the model actually saw).
 - `app/query_agent.py` — the CLI entrypoint (`python -m app.query_agent`).
   The only module with argparse/printing/CLI-specific error handling;
   depends on `agent.py` and `runner.py`, and nothing else depends on it.
+  `main()` injects both `model_factory` and `client_factory` (defaulting to
+  the real ones) so its whole path is testable offline. Keep both seams: with
+  only `model_factory`, any path where the model calls a tool would hit live
+  Wikipedia, so the CLI's tool-calling and retry output went untested and the
+  tests sat on private display helpers instead.
 - `evaluations/` — the eval suite (assignment deliverable #3).
   `models.py` (per-dataset metadata models — `HotpotQAMetadata`:
   `level`/`type`/`hotpotqa_id`; `RefusalMetadata`: `category`/`phrasing`;
@@ -211,10 +220,13 @@ to a logging contract and can drift from what the model actually saw).
   the repo, by design: prefer a native evaluator over a hand-rolled one
   whenever one exists, and only add a custom class (in a new
   `evaluators.py`) when a dataset's check genuinely can't be expressed
-  natively. `task.py` (`production_task()`: the one production
-  entrypoint every dataset's cases run through — wraps
-  `app.bootstrap.resolve_real_model()` + `app.tools.build_wikipedia_client()` +
-  `app.runner.run_agent()`; reused unchanged across every dataset). `run.py`
+  natively. `task.py` (`production_task(model=None, client=None)`: the one
+  production entrypoint every dataset's cases run through — defaults to
+  `app.bootstrap.resolve_real_model()` + `app.tools.build_wikipedia_client()`
+  wrapped around `app.runner.run_agent()`; reused unchanged across every
+  dataset. Both deps are injectable *only* so this entrypoint is testable
+  without an API key; an injected client belongs to the caller and is not
+  closed here). `run.py`
   (generic: `uv run python -m evaluations.run <dataset_name>` — never
   touched when adding a new dataset, since the dataset name is just an
   argument; loads datasets as `Dataset[str, RunTranscript, Any]` —
@@ -283,15 +295,30 @@ to a logging contract and can drift from what the model actually saw).
   `docs/hotpotqa_1809.09600v1.md` for reference. The `refusal` dataset is
   hand-authored (not HotpotQA-sourced) — no external dataset, same
   no-build-script rule applies.
-- `tests/unit/test_app_imports.py` is a smoke test only (import-time check
-  on the six `app` modules plus `evaluations/*`) — it doesn't verify
-  dataset *content*; `tests/unit/test_datasets.py` loads each committed
-  dataset YAML for real (via `Dataset.from_file`) and asserts on its case
-  count/metadata, so a renamed evaluator or YAML typo fails fast in pytest
-  instead of only surfacing on a live run. The eval suite has two datasets,
+- Tests live in `tests/unit/`, with shared fakes in `conftest.py`: the
+  `MediaWiki` response builders (one place knows the wire format, so a shape
+  change is a one-line edit), `wikipedia_mock_transport`, `tool_context` (a
+  minimal `RunContext` for calling `search_wikipedia` directly, so each
+  `ModelRetry` message can be asserted on its own rather than via a bespoke
+  `FunctionModel` per case; the transcript route is still used where the
+  retry's *recording* is the point),
+  and the shared `FunctionModel` behaviours. A test that pokes a pure helper or
+  a private function has to earn it: the bar is that mutating what it guards
+  must survive the rest of the suite (mutate the behaviour, deselect the test,
+  re-run — if another test fails, the low-gear one is glue and goes). Prefer
+  making a fake more realistic over keeping a helper test — the search fake
+  returns a runner-up title precisely so "the first result" is observable from
+  the entrypoint. Assert *behaviour*, not census:
+  dataset tests check properties (every category present, roughly balanced,
+  `MaxToolCalls` budget) rather than exact per-category counts, since pinning
+  counts means adding a good case fails the suite. `tests/unit/test_datasets.py`
+  loads each committed dataset YAML for real (via `Dataset.from_file`),
+  resolving paths from `evaluations.run.DATASETS_DIR` so it passes from any
+  cwd, so a renamed evaluator or YAML typo fails fast in pytest instead of
+  only surfacing on a live run. The eval suite has two datasets,
   covering the two halves of correct behavior: `refusal` (50
   hand-authored questions the agent should decline — unsafe/gibberish/
-  unanswerable, 17/17/16 — checked via native `MaxToolCalls(max_calls=0)` plus two
+  unanswerable — checked via native `MaxToolCalls(max_calls=0)` plus two
   `LLMJudge` evaluators for refusal quality and safety, judged by a
   different model than the agent under test to reduce self-grading bias),
   and `answer_quality` (50 hard-difficulty HotpotQA validation-split

@@ -5,6 +5,7 @@ import asyncio
 import sys
 from collections.abc import AsyncIterable, Callable, Sequence
 
+import httpx
 from pydantic import ValidationError
 from pydantic_ai import AgentStreamEvent, FunctionToolCallEvent, FunctionToolResultEvent, RunContext
 from pydantic_ai.messages import (
@@ -75,6 +76,7 @@ def main(
     argv: Sequence[str] | None = None,
     *,
     model_factory: Callable[[], Model | KnownModelName] = resolve_real_model,
+    client_factory: Callable[[], httpx.Client] = build_wikipedia_client,
 ) -> None:
     parser = argparse.ArgumentParser(description="Ask the Wikipedia Q&A agent a question.")
     parser.add_argument("question")
@@ -89,7 +91,7 @@ def main(
         )
         sys.exit(1)
 
-    with build_wikipedia_client() as client:
+    with client_factory() as client:
         asyncio.run(
             run_agent_streaming(
                 agent,
