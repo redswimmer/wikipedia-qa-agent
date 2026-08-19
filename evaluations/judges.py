@@ -1,4 +1,4 @@
-"""LLM-as-judge evaluators, built at load time from `evaluations/rubrics/*.md`.
+"""LLM-as-judge evaluators, built at load time from `evaluations/judge_prompts/`.
 
 Each rubric lives in its own markdown file whose entire content *is* the prompt
 string the judge receives — so the file a reviewer reads is byte-for-byte what
@@ -10,7 +10,7 @@ from pathlib import Path
 
 from pydantic_evals.evaluators import LLMJudge
 
-RUBRICS_DIR = Path(__file__).parent / "rubrics"
+JUDGE_PROMPTS_DIR = Path(__file__).parent / "judge_prompts"
 
 # Judging is done by Opus while the agent under test runs Sonnet, to reduce
 # self-grading bias. Round-trips through pydantic_evals as a plain model string,
@@ -27,7 +27,7 @@ _DATASET_JUDGES = {
 
 def _judge(name: str) -> LLMJudge:
     return LLMJudge(
-        rubric=(RUBRICS_DIR / f"{name}.md").read_text(),
+        rubric=(JUDGE_PROMPTS_DIR / f"{name}.md").read_text(),
         model=JUDGE_MODEL,
         include_input=True,
         # Only correctness grades against a gold answer; the others judge the

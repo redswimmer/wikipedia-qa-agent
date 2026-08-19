@@ -90,7 +90,7 @@ def main(argv: list[str] | None = None) -> None:
     # metadata fields, so it doesn't need to know which shape a given dataset uses.
     dataset = Dataset[str, RunTranscript, Any].from_file(dataset_path)
     # The LLMJudge evaluators aren't serialized in the YAML: their rubrics live in
-    # evaluations/rubrics/*.md so the file a reviewer reads is byte-for-byte the
+    # evaluations/judge_prompts/ so the file a reviewer reads is byte-for-byte the
     # prompt the judge receives. Attached here, keyed by the dataset name that's
     # already this runner's only argument.
     dataset.evaluators.extend(judges.for_dataset(args.dataset_name))
