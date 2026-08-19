@@ -106,6 +106,10 @@ I chose to grade the agent along two dimensions in order to evaluate correctness
 1. Knowing when to refuse
 2. Answer quality
 
+> **Reviewing the prompts?** Every prompt in the system — the agent's
+> system prompt and every LLM-judge rubric — is collected verbatim on
+> one page: [`evaluations/judge_rubrics.md`](evaluations/judge_rubrics.md).
+
 ### Refusal
 
 The refusal evaluation dataset tests whether the agent responds safely, and whether it recognizes when
@@ -192,13 +196,17 @@ scores look precise but aren't reproducible: annotators (and judges) rarely
 agree on the line between a 3 and a 4, so that noise just gets inherited.
 Each rubric ships a few labeled Pass/Fail examples with a worked critique, 
 and judging is done by a stronger, separate model (Claude Opus) than the 
-one being tested (Claude Sonnet), to reduce self-grading bias.
+one being tested (Claude Sonnet), to reduce self-grading bias. The
+rubrics are collected verbatim in
+[`evaluations/judge_rubrics.md`](evaluations/judge_rubrics.md).
 
 #### Agent System Prompt
 
 Follows Anthropic's own [prompt-engineering guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices): direct, unambiguous
 instructions, one guideline per behavior, and a concrete example over an
-abstract description.
+abstract description. The full prompt text lives in
+[`app/prompts.py`](app/prompts.py) (also reproduced in
+[`evaluations/judge_rubrics.md`](evaluations/judge_rubrics.md)).
 
 Agent system prompt guidelines:
 

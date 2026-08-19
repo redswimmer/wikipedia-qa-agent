@@ -230,6 +230,10 @@ to a logging contract and can drift from what the model actually saw).
   only live evidence they see. Capture with the wide-`COLUMNS` invocation
   above; findings worth a reviewer's attention get distilled from these into
   `eval_notes.md`/README, not left as raw files for someone to dig through.
+  `judge_rubrics.md` — reviewer-facing reading copy of every prompt in the
+  system (agent system prompt + every judge rubric, extracted verbatim).
+  It has no sync test, deliberately: if you change `app/prompts.py` or any
+  rubric in a dataset YAML, update this page by hand in the same change.
 - OpenTelemetry/Logfire: `app/agent.py` sets `agent.instrument = True` on
   the shared `agent` object (harmless without a configured tracer — spans
   go to a no-op provider; only `evaluations/run.py` actually configures one,
