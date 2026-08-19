@@ -106,11 +106,10 @@ I chose to grade the agent along two dimensions in order to evaluate correctness
 1. Knowing when to refuse
 2. Answer quality
 
-> **Reviewing the prompts?** There are two kinds, and both are plain
-> text you can read directly: the agent's system prompt in
-> [`app/prompts.py`](app/prompts.py), and one file per LLM-judge rubric in
-> [`evaluations/judge_prompts/`](evaluations/judge_prompts/) — each read
-> verbatim at runtime, so the file *is* the prompt.
+> **Reviewing the prompts?** The agent's system prompt is
+> [`app/prompts.py`](app/prompts.py); each judge rubric is its own file in
+> [`evaluations/judge_prompts/`](evaluations/judge_prompts/), read verbatim
+> at runtime — so the file *is* the prompt.
 
 ### Refusal
 
@@ -187,29 +186,25 @@ dimension runs are covered in [Evals](#evals) above.
 
 ### Prompt Engineering Approach
 
-My solution has two categories of LLM prompts: the prompts for the LLM
-judges that grade eval cases, and the agent's system prompt for steering the agent
-on how to answer the user's query.
+Two categories: the rubrics the LLM judges grade with, and the agent's own
+system prompt.
 
 #### Judge Prompts
 
-Every LLMJudge is binary Pass/Fail, not a 1–5 scale. Scale
-scores look precise but aren't reproducible: annotators (and judges) rarely
-agree on the line between a 3 and a 4, so that noise just gets inherited.
-Each rubric ships a few labeled Pass/Fail examples with a worked critique, 
-and judging is done by a stronger, separate model (Claude Opus) than the 
-one being tested (Claude Sonnet), to reduce self-grading bias. Each rubric is
-its own file in
-[`evaluations/judge_prompts/`](evaluations/judge_prompts/), loaded verbatim
-at runtime, so the text you read is exactly the text the judge receives.
+Every LLMJudge is binary Pass/Fail, not a 1–5 scale: scale scores look
+precise but aren't reproducible, since annotators (and judges) rarely agree
+on the line between a 3 and a 4. Each rubric ships a few labeled Pass/Fail
+examples with a worked critique, and judging is done by a stronger, separate
+model (Claude Opus) than the one being tested (Claude Sonnet), to reduce
+self-grading bias. The rubrics are in
+[`evaluations/judge_prompts/`](evaluations/judge_prompts/).
 
 #### Agent System Prompt
 
 Follows Anthropic's own [prompt-engineering guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices): direct, unambiguous
 instructions, one guideline per behavior, and a concrete example over an
-abstract description. The full prompt text lives in
-[`app/prompts.py`](app/prompts.py); the judge rubrics are its counterpart
-in [`evaluations/judge_prompts/`](evaluations/judge_prompts/).
+abstract description. The full prompt text is in
+[`app/prompts.py`](app/prompts.py).
 
 Agent system prompt guidelines:
 
