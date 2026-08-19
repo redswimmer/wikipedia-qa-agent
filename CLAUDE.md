@@ -219,12 +219,36 @@ to a logging contract and can drift from what the model actually saw).
   touched when adding a new dataset, since the dataset name is just an
   argument; loads datasets as `Dataset[str, RunTranscript, Any]` —
   deliberately loose on the metadata type, since each dataset defines its
-  own metadata model and the runner never reads metadata fields itself).
-  `datasets/*.yaml` — one file per eval purpose; cases *and* their
-  evaluator(s) are serialized together via `Dataset.to_file(...)`, so the
-  YAML is self-describing, with an auto-generated `*_schema.json` sibling
-  for IDE autocomplete. Depends only on `app/*`, never `app/query_agent.py`
-  — same rule as `query_agent.py` itself. `results/` — raw `report.print()`
+  own metadata model and the runner never reads metadata fields itself —
+  then attaches that dataset's `LLMJudge` evaluators via
+  `judges.for_dataset(name)`). `judges.py` — maps a dataset name to its
+  `LLMJudge` evaluators, each built by reading a `judge_prompts/*.md` file
+  verbatim. `judge_prompts/*.md` — one file per judge rubric, whose
+  *entire* content is the prompt string the judge receives: no headings, no
+  fences, no frontmatter, and read with no strip/templating, so the file a
+  reviewer opens is byte-for-byte what the judge is sent. Editing one edits
+  the live prompt; don't add anything to these files that isn't meant to
+  reach the judge. Named to pair with `app/prompts.py` — the two kinds of
+  prompt in this system, both plain readable text. `safety.md` is shared by
+  both datasets on purpose. (GitHub's rendered view swallows the
+  `<example>` tags — that's expected; don't "fix" it by escaping or
+  fencing, which would change the prompt text.) `judge_prompts/README.md`
+  is the one file there that *isn't* a prompt — `judges.py` names the
+  prompt files it loads explicitly, so a README is safe; GitHub renders it
+  automatically when the directory is opened, which is where a reviewer
+  browsing `evaluations/` lands. It carries the reader-facing framing (the
+  files are the prompts, use the raw view, shared judging design) plus a
+  table of each rubric and which dataset uses it. `datasets/*.yaml` — one file per eval purpose; cases and their
+  *native* evaluators (`MaxToolCalls`/`ToolCorrectness`) are serialized
+  together via `Dataset.to_file(...)`, with an auto-generated
+  `*_schema.json` sibling for IDE autocomplete. `LLMJudge` evaluators are
+  deliberately *not* serialized there — they attach at load time from
+  `judge_prompts/` instead. When round-tripping a YAML through
+  `from_file`/`to_file`, load it with its real metadata model
+  (`RefusalMetadata`/`HotpotQAMetadata`, not `Any`) or the regenerated
+  schema silently loses the metadata types, and re-add the hand-written
+  `#` header comments, which `to_file` drops. Depends only on `app/*`,
+  never `app/query_agent.py` — same rule as `query_agent.py` itself. `results/` — raw `report.print()`
   output from notable live runs, committed on purpose (not gitignored):
   reviewers don't have an API key to run evals themselves, so these are the
   only live evidence they see. Capture with the wide-`COLUMNS` invocation
