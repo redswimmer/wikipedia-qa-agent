@@ -105,7 +105,7 @@ help with related things I *can* discuss safely, such as...
 ```
 app/
   prompts.py          # the agent's system prompt — the file is the prompt
-  agent.py            # the agent: prompt + tool wired together
+  agent.py            # the agent
   tools.py            # the search_wikipedia tool
   runner.py           # shared entry point for CLI and evals; returns the audit transcript
   query_agent.py      # CLI for asking the agent a question
