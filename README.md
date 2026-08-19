@@ -106,6 +106,8 @@ help with related things I *can* discuss safely, such as...
 app/
   prompts.py          # the agent's system prompt — the file is the prompt
   agent.py, tools.py  # agent definition + the search_wikipedia tool
+  runner.py           # run_agent(): shared entry point for the CLI and the
+                      #   eval suite; returns the auditable run transcript
   query_agent.py      # CLI entrypoint
 evaluations/
   judge_prompts/      # one file per judge rubric, sent to the judge verbatim
