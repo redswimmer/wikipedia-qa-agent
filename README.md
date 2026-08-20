@@ -187,15 +187,13 @@ uv run python -m evaluations.run answer_quality
 ### Search Discipline
 
 The [`search_discipline`](evaluations/datasets/search_discipline.yaml)
-dataset exists because of an observed failure mode with a history of
-regressing: on easy trivia the agent sometimes answers from its own
-training knowledge with **zero** searches, despite the "always search
-first" instruction. That loophole was originally found by manual probing
-(no committed eval exercised single-hop questions — HotpotQA cases are all
-multi-hop), and the fix silently regressed once when an unrelated prompt
-edit reverted it. This dataset turns the manual ritual into 12 committed
-single-hop cases — and caught the loophole live on its first run:
-*"What is the capital of France?"* answered with no search.
+dataset guards one observed failure mode: on easy trivia the agent
+sometimes answers from training knowledge with **zero** searches. Found
+by manual probing (every committed case was multi-hop, so no eval covered
+it), fixed, then silently regressed when a later prompt edit reverted the
+fix — so the manual check became 12 committed single-hop cases. It caught
+the loophole live on its first run: *"What is the capital of France?"*
+answered with no search.
 
 ```bash
 # Run search discipline evaluations
@@ -211,6 +209,22 @@ No LLM judge attaches to this dataset — both checks are objective, so
 native evaluators carry it entirely.
 
 ## Design Rationale
+
+**The story in brief:** the suite began with two datasets grading generic
+quality axes (refusal, answer quality). Reading every failing trace turned
+those scores into a taxonomy of seven named failure modes with counts —
+which revealed three different kinds of problem: agent bugs (a runaway
+search spiral; answers padded with unretrieved facts), eval bugs (budgets
+failing behavior the quality judges called correct), and a previously
+fixed failure with no regression guard. Each got the fix its kind
+demanded — enforcement code, recalibrated eval specs, one new dataset —
+and four more live runs measured the result: the structural failures are
+gone (budget failures 14 → 0; the runaway bounded from 15 minutes to
+seconds), one prompt fix was reported as inconclusive when a confirming
+run didn't replicate it, and faithfulness remains the biggest open axis.
+Every number is re-derivable from the committed run reports in
+[`evaluations/results/`](evaluations/results/); the detail lives in
+[Key Iterations](#key-iterations).
 
 ### Auditability
 
@@ -314,53 +328,33 @@ Agent system prompt guidelines:
   a self-harm-adjacent prompt proactively surfaced a crisis hotline,
   unprompted — without being explicitly asked to.
 - **Faithfulness, not correctness, is the biggest failing axis on answer
-  quality.** In the 2026-08-10 runs
-  ([raw report](evaluations/results/answer_quality_2026-08-10_after-split-bullet.txt)),
-  16/50 cases failed `faithfulness` versus 8/50 for `correctness`, while
-  `safety` never failed and `relevance` rarely did. Nearly all 16 share one
-  pattern: the answer is padded with facts recalled from the model's own
-  training memory rather than retrieved — often true (e.g. "TCS is
+  quality** — 16/50 vs 8/50 in the 2026-08-10 runs, while `safety` never
+  failed. Nearly all 16 share one pattern: the answer is padded with facts
+  from the model's own training memory — often true (e.g. "TCS is
   headquartered in Mumbai") but never present in any search result. A
-  prompt fix naming that loophole measured 10/50 on its first run and
-  15/50 on a confirming run — inconclusive, and reported as such. It
-  remains the biggest open axis; closing it likely needs a stronger
-  mechanism than prompt wording. See the failure-mode taxonomy under
-  [Key Iterations](#key-iterations).
-- **Agent sometimes answers from its own training knowledge instead of
-  searching.** For well-known facts (e.g. the capital of France) that's
-  arguably efficient, but the prompt instructs it to always search
-  anyway, and the eval scores skipping search as a failure — prioritizing groundedness
-  over efficiency. This failure is stochastic: manual probes passed 3/3,
-  yet the `search_discipline` dataset caught "What is the capital of
-  France?" answered with zero searches on its first live run — which is
-  why it's now a committed dataset rather than a manual ritual (12/12 on
-  both runs since the grounding prompt fix).
-- **Judge prompts underperformed initially.** The rubrics themselves needed
-  iteration: I added few-shot examples wrapped in `<examples>` tags with a
-  "why this matters" motivation line, per [Anthropic's prompting guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices), and enforced strict binary Pass/Fail verdicts.
+  prompt fix measured 10/50, then 15/50 on a confirming run —
+  inconclusive, and reported as such. Still the biggest open axis.
+- **The agent sometimes skips the search entirely on easy trivia**,
+  answering from its own knowledge despite the "always search"
+  instruction. The failure is stochastic — manual probes passed 3/3, yet
+  the committed `search_discipline` dataset caught "What is the capital
+  of France?" at zero searches on its first live run (see
+  [Search Discipline](#search-discipline)).
+- **Judging is its own engineering problem.** The rubrics needed
+  iteration (few-shot examples in `<examples>` tags, strict binary
+  Pass/Fail, per [Anthropic's prompting guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices)) — and
+  a hard limitation surfaced: the Opus judge's own content filter refuses
+  to grade the same 6 hacking-flavored refusal cases on every run, all of
+  which the agent itself handles correctly.
 - **Eval infrastructure overwhelmed Wikipedia's rate limiter.** The first
   live run fired all 50 cases at once; 46-50% failed from connection
   errors, not agent mistakes. Fixed with a concurrency cap plus exponential
   backoff retries on failed cases and judge calls.
-- **Agent sometimes searches before recognizing a made-up term as fake.**
-  Asked about "the plinkory thing," it ran one search before concluding the
-  term isn't real — reasonable caution the eval originally scored as a
-  failure under a flat zero-search budget. The budget is now split by
-  category so caution isn't penalized; what remains red is genuine flailing
-  (2–3 searches on obvious nonsense) and, once, an unsafe case that
-  triggered a search it never should have (see the taxonomy below).
-- **Runaway tool calls on a tricky, ambiguous query.** One question (its
-  "Aladin" collides with the far more famous "Aladdin") sent the agent into
-  59, then 76, search attempts — $1.52 and ~15 minutes — before still
-  failing. Now capped: the same case terminates in seconds within a dozen
-  bounded attempts, though it still ends in a clean error rather than a
-  graceful "couldn't find it" (see the taxonomy and Future Work).
-- **The judge's own content filter refuses to grade the most sensitive
-  prompts.** On both 2026-08-19 refusal runs the Opus judge returned
-  `ContentFilterError` on the same 6 hacking-flavored cases — all of which
-  the agent itself handled correctly with zero searches and clean declines.
-  A limitation of LLM-judging the most sensitive inputs, documented rather
-  than hidden.
+
+Every other observed failure mode — the runaway search spiral, gibberish
+over-searching, wrong-entity and granularity misses — is cataloged with
+counts, examples, and fix status in the taxonomy table under
+[Key Iterations](#key-iterations).
 
 ### Key Iterations
 
@@ -446,9 +440,8 @@ The iterations that closed those rows:
    measured `faithfulness` 16 → 10; a confirming run measured 15. That's
    inconclusive at n=50, and it's reported as inconclusive — the same
    discipline that dismissed `correctness` drifting 8 → 11 → 9 → 10 as
-   noise has to apply to a delta we liked. The confirming run is why the
-   claim is honest instead of wrong. `search_discipline`, the regression
-   net for this prompt region, held: 12/12, twice.
+   noise has to apply to a delta we liked. `search_discipline`, the
+   regression net for this prompt region, held: 12/12, twice.
 
 ### Future Work
 
