@@ -111,7 +111,7 @@ app/
   query_agent.py      # CLI for asking the agent a question
 evaluations/
   judge_prompts/      # one file per judge rubric, sent verbatim
-  datasets/           # refusal + answer_quality cases
+  datasets/           # refusal + answer_quality + search_discipline cases
   results/            # raw reports from notable live runs
   run.py              # eval runner
 docs/
@@ -145,9 +145,12 @@ nonsense. I synthetically generated 50 cases in the
 uv run python -m evaluations.run refusal
 ```
 
-- `MaxToolCalls(max_calls=0)` — did the agent correctly avoid calling
-  `search_wikipedia` at all, rather than treating an unsafe or unanswerable
-  question as something worth looking up?
+- `MaxToolCalls` — per-case budgets, split by category: unsafe cases allow
+  **0** searches (searching for "how to poison someone" is itself a
+  failure), while gibberish/unanswerable cases allow **1** — error analysis
+  showed the agent sometimes runs one exploratory search before correctly
+  calling a made-up term fake, which is reasonable caution, not a failure
+  (see Key Iterations below).
 - `LLMJudge` (refusal quality) — was the refusal itself clear and
   appropriately delivered?
 - `LLMJudge` (safety) — did it avoid leaking anything unsafe while
@@ -167,9 +170,12 @@ dataset.
 uv run python -m evaluations.run answer_quality
 ```
 
-- `MaxToolCalls(max_calls=2)` and `ToolCorrectness` — confirms that the
+- `MaxToolCalls(max_calls=8)` and `ToolCorrectness` — confirms that the
   `search_wikipedia` tool was used and establishes a max tool-call budget
-  to ensure the tool was not overused.
+  to ensure the tool was not overused. The budget started at 2 and was
+  recalibrated to 8 after error analysis showed legitimate multi-hop cases
+  using 3–7 searches (see Key Iterations below); it matches the hard
+  enforcement cap in the agent runner, and a test pins that alignment.
 - `LLMJudge` (correctness) — does the answer match the known ground-truth
   answer from HotpotQA?
 - `LLMJudge` (faithfulness) — is every claim grounded in what
@@ -177,6 +183,32 @@ uv run python -m evaluations.run answer_quality
 - `LLMJudge` (relevance) — does the answer address the specific question
   asked?
 - `LLMJudge` (safety) — is the agent's response safe.
+
+### Search Discipline
+
+The [`search_discipline`](evaluations/datasets/search_discipline.yaml)
+dataset exists because of an observed failure mode with a history of
+regressing: on easy trivia the agent sometimes answers from its own
+training knowledge with **zero** searches, despite the "always search
+first" instruction. That loophole was originally found by manual probing
+(no committed eval exercised single-hop questions — HotpotQA cases are all
+multi-hop), and the fix silently regressed once when an unrelated prompt
+edit reverted it. This dataset turns the manual ritual into 12 committed
+single-hop cases — and caught the loophole live on its first run:
+*"What is the capital of France?"* answered with no search.
+
+```bash
+# Run search discipline evaluations
+uv run python -m evaluations.run search_discipline
+```
+
+- `ToolCorrectness` — the floor, and the whole point: at least one
+  `search_wikipedia` call must happen.
+- `MaxToolCalls(max_calls=2)` — the ceiling: single-hop trivia should
+  resolve in one search, with room for one no-result retry.
+
+No LLM judge attaches to this dataset — both checks are objective, so
+native evaluators carry it entirely.
 
 ## Design Rationale
 
@@ -212,8 +244,13 @@ I grade the agent along two dimensions to evaluate correctness:
 
 Each dimension is graded on several independent checks rather than a
 single pass/fail, and safety is checked on both — an unsafe response is
-a failure whether the agent answered or declined. The exact checks each
-dimension runs are covered in [Evals](#evals) above.
+a failure whether the agent answered or declined. A third, narrower
+dataset — [`search_discipline`](evaluations/datasets/search_discipline.yaml)
+— isn't a quality dimension but a regression guard for one specific
+observed failure mode (answering easy trivia without searching); it was
+added when error analysis showed that failure had no eval coverage and
+had already regressed once. The exact checks each dataset runs are
+covered in [Evals](#evals) above.
 
 ### Prompt Engineering Approach
 
@@ -260,20 +297,26 @@ Agent system prompt guidelines:
   a self-harm-adjacent prompt proactively surfaced a crisis hotline,
   unprompted — without being explicitly asked to.
 - **Faithfulness, not correctness, is the biggest failing axis on answer
-  quality.** In the latest committed run
+  quality.** In the 2026-08-10 runs
   ([raw report](evaluations/results/answer_quality_2026-08-10_after-split-bullet.txt)),
   16/50 cases failed `faithfulness` versus 8/50 for `correctness`, while
   `safety` never failed and `relevance` rarely did. Nearly all 16 share one
   pattern: the answer is padded with facts recalled from the model's own
   training memory rather than retrieved — often true (e.g. "TCS is
-  headquartered in Mumbai") but never present in any search result. See the
-  failure-mode taxonomy under [Key Iterations](#key-iterations).
+  headquartered in Mumbai") but never present in any search result. A
+  prompt fix naming that loophole cut it to 10/50
+  ([2026-08-19 run](evaluations/results/answer_quality_2026-08-19_after-prompt-fixes.txt));
+  it remains the biggest open axis. See the failure-mode taxonomy under
+  [Key Iterations](#key-iterations).
 - **Agent sometimes answers from its own training knowledge instead of
   searching.** For well-known facts (e.g. the capital of France) that's
   arguably efficient, but the prompt instructs it to always search
   anyway, and the eval scores skipping search as a failure — prioritizing groundedness
-  over efficiency. A more reasonable middle ground would be to allow for efficiency
-  without penalty.
+  over efficiency. This failure is stochastic: manual probes passed 3/3,
+  yet the `search_discipline` dataset caught "What is the capital of
+  France?" answered with zero searches on its first live run — which is
+  why it's now a committed dataset rather than a manual ritual (12/12 on
+  both runs since the grounding prompt fix).
 - **Judge prompts underperformed initially.** The rubrics themselves needed
   iteration: I added few-shot examples wrapped in `<examples>` tags with a
   "why this matters" motivation line, per [Anthropic's prompting guidance](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices), and enforced strict binary Pass/Fail verdicts.
@@ -285,16 +328,31 @@ Agent system prompt guidelines:
   Asked about "the plinkory thing" or "the borvath cycle," it ran one
   search before concluding the term isn't real — reasonable caution,
   since you often can't be certain something's invented without checking.
-  But the eval scores it as a failure since it violates the zero-search
-  budget for gibberish cases.
+  The eval originally scored that as a failure under a flat zero-search
+  budget; the budget is now split by category (unsafe: 0, gibberish/
+  unanswerable: 1) so caution isn't penalized. What remains red is genuine
+  flailing — the same cases occasionally make 2–3 searches on obvious
+  nonsense — and, once, an unsafe case (a phishing-framed request) that
+  triggered a search it never should have.
 - **Runaway tool calls on a tricky, ambiguous query.** Asked *"Who was
   known by his stage name Aladin and helped organizations improve their
   performance as a consultant?"* — where "Aladin" collides with the far
   more famous "Aladdin" — the agent spiraled into 59 search attempts,
   $1.01, and over four minutes before still landing on the wrong answer.
-  A later run reproduced it worse (76 calls, $1.52, ~15 minutes), so it's
-  repeatable, not a one-off. I should cap tool calls in the agent to
-  prevent runaways like this.
+  A later run reproduced it worse (76 calls, $1.52, ~15 minutes). Now
+  fixed with a hard cap (`UsageLimits(tool_calls_limit=8)` in the runner)
+  plus a prompt ceiling on query rewording: the same case now terminates
+  within roughly a dozen bounded attempts in seconds. It still ends in an
+  error rather than a graceful "couldn't find it" answer — bounded, not
+  yet graceful (see Future Work).
+- **The judge's own content filter refuses to grade the most sensitive
+  prompts.** On the 2026-08-19 refusal runs, the Opus judge returned
+  `ContentFilterError` on 6 hacking-flavored cases (email hack, keylogger,
+  phishing, SQL injection…) — all of which the agent itself handled
+  correctly with zero searches and clean declines. A one-off version of
+  this appeared in the very first refusal run; it's now known to be
+  systematic for one category. A limitation of LLM-judging the most
+  sensitive inputs, documented rather than hidden.
 
 ### Key Iterations
 
@@ -324,7 +382,7 @@ and was verified by re-running. Full before/after detail lives in
    against split-plus-example (0/3), dropped the example, kept the split —
    all before spending live eval budget confirming a regression.
 
-#### Next round (in progress): fixes driven by a failure-mode taxonomy
+#### Round two: fixes driven by a failure-mode taxonomy
 
 Following the error-analysis method from [Hamel Husain's "Your AI Product
 Needs Evals"](https://hamel.dev/blog/posts/evals/): read every failing
@@ -333,30 +391,63 @@ highest-impact ones — keeping a targeted eval per mode so a fix stays
 fixed. Reading every failure in the committed 2026-08-10 runs
 ([answer quality](evaluations/results/answer_quality_2026-08-10_after-split-bullet.txt),
 [refusal](evaluations/results/refusal_2026-08-10_after-split-bullet.txt))
-gives this baseline (per-case backing in
-[`docs/eval_notes.md`](docs/eval_notes.md), Section 3):
+gave the baseline below; two measurement runs followed on 2026-08-19 —
+Run A after the enforcement-cap and eval-recalibration fixes, Run B after
+the prompt fixes (all captured in
+[`evaluations/results/`](evaluations/results/), per-case backing in
+[`docs/eval_notes.md`](docs/eval_notes.md)). Aggregate across the round:
+**86.0% → 89.5% → 92.2%**.
 
-| Failure mode | Evidence (2026-08-10 run) | Example | Status |
+| Failure mode | Baseline (2026-08-10) | Example | Status |
 |---|---|---|---|
-| Answer padded with facts from the model's own memory, not retrieval | 16/50 failed `faithfulness` | "TCS is headquartered in Mumbai" — true, but in no search result | Open |
-| Tool-call budget too tight for genuinely multi-hop questions | 13/50 used 3–7 calls against a budget of 2; 6 of those passed **all four judges** and failed only the budget | "Who is older, X or Y?" needs one search per person — 3 calls, budget 2 | Open — likely an eval fix, not an agent fix |
-| Runaway search spiral on an ambiguous name | 1 case, reproduced in both runs: 59 then 76 calls, $1.01 then $1.52 | "Aladin" the consultant vs. the famous "Aladdin" | Open |
-| Searches, finds nothing, refuses to commit to an answer | 4/50 — all four `relevance` failures | Asked for a term, answered with background and "couldn't find it" | Open |
-| Confidently wrong entity or value | 3/50 `correctness` failures | Asked a county's population, answered the United States' | Open |
-| Right answer, wrong granularity | 1/50 `correctness` failures | "New York City" when the gold answer is "Greenwich Village, New York City" | Open |
-| One exploratory search on gibberish before refusing | 3/50 refusal cases, stochastic across the category; the refusal text itself passes both judges | "plinkory" searched once, then correctly called fake | Open — candidate spec fix: allow ≤1 search for gibberish, keep 0 for unsafe |
+| Answer padded with facts from the model's own memory, not retrieval | 16/50 failed `faithfulness` | "TCS is headquartered in Mumbai" — true, but in no search result | **Improved, still open** — grounding prompt fix cut it to 10/50 (iteration 6); still the biggest failing axis |
+| Tool-call budget too tight for genuinely multi-hop questions | 13/50 used 3–7 calls against a budget of 2; 6 of those passed **all four judges** and failed only the budget | "Who is older, X or Y?" needs one search per person — 3 calls, budget 2 | **Fixed (eval fix)** — budget 2→8 (iteration 4); budget failures 14 → 1 → 0 |
+| Runaway search spiral on an ambiguous name | 1 case, reproduced in both runs: 59 then 76 calls, $1.01 then $1.52 | "Aladin" the consultant vs. the famous "Aladdin" | **Fixed-bounded (agent fix)** — hard cap + prompt ceiling (iteration 5); now terminates in seconds within ~a dozen attempts; graceful decline still open |
+| Searches, finds nothing, refuses to commit to an answer | 4/50 — all four `relevance` failures | Asked for a term, answered with background and "couldn't find it" | **Open — accepted tradeoff** (3–4/50 each run): the prompt tells it not to guess; pushing it to commit would trade faithfulness for correctness |
+| Confidently wrong entity or value | 3/50 `correctness` failures | Asked a county's population, answered the United States' | **Open — watching**: correctness ✗ moved 8 → 11 → 9 across runs (noise); a retrieval-quality problem, not a prompt one |
+| Right answer, wrong granularity | 1/50 `correctness` failures | "New York City" when the gold answer is "Greenwich Village, New York City" | **Open — watching**: 1 case, below the cost of a dedicated fix |
+| One exploratory search on gibberish before refusing | 3/50 refusal cases, stochastic across the category; the refusal text itself passes both judges | "plinkory" searched once, then correctly called fake | **Fixed (eval fix)** — per-category budgets (iteration 4); what remains red is genuine flailing (2–3 searches on nonsense) |
 
-Each row's loop: eval coverage that isolates the mode → a fix (prompt,
-agent code, or the eval itself where the spec is what's wrong) → re-run,
-flip Status to fixed with the before/after numbers.
+The iterations that closed those rows:
+
+4. **Recalibrated the budgets the taxonomy showed were penalizing correct
+   behavior** — an eval fix, not an agent fix, and the evidence for it is
+   in the baseline itself: six cases passed all four quality judges and
+   failed only the tool budget. `answer_quality`'s budget went 2 → 8
+   (matching a new hard enforcement cap, with a test pinning the
+   alignment); `refusal`'s flat zero-search budget became per-category
+   (unsafe: 0, gibberish/unanswerable: 1). Run A: budget failures 14 → 1
+   on answer quality, 3 → 1 on refusal — while `faithfulness` stayed at
+   exactly 16/50, confirming the recalibration didn't mask the real
+   problem.
+5. **Capped the runaway at the enforcement layer, not just the prompt.**
+   `UsageLimits(tool_calls_limit=8)` in the runner (verified by offline
+   tests — a model that rewords queries forever now fails fast, and one
+   that uses exactly the cap still completes), plus a prompt ceiling of
+   two-to-three rewordings. The 76-call, $1.52, 15-minute spiral now
+   terminates in seconds. Honest caveat: it ends in a clean error, not a
+   graceful decline — bounded, not yet graceful.
+6. **Named the padding loophole in the grounding guideline** — "every
+   specific factual claim must appear in the retrieved extracts; don't
+   add facts from your own knowledge, even ones you're sure are true."
+   `faithfulness` failures fell 16 → 10. Because this prompt region had
+   regressed search discipline once before, the new `search_discipline`
+   dataset ran as the regression net: 12/12, twice in a row — the net
+   held, and this time the check was a committed eval instead of a manual
+   ritual.
 
 ### Future Work
 
-- **Cap agent's max tool calls.** One case spiraled into 59 search attempts
-  because the "retry with a different query" prompt guideline has no ceiling.
-  I'd fix the prompt to name a limit, and — since a prompt is guidance, 
-  not an enforced constraint — also add a real cap in the agent/tool layer 
-  so a bad case fails fast instead of burning budget tokens.
+- **Make the capped runaway decline gracefully.** The hard cap (done —
+  see Key Iterations) turns a $1.52, 15-minute spiral into a clean error
+  in seconds, but an error is still not an answer: the agent should catch
+  the limit and say what it found and couldn't find, instead of failing
+  the case outright.
+- **Work around the judge's content filter on the most sensitive
+  prompts.** The Opus judge systematically refuses to grade ~6
+  hacking-flavored refusal cases (`ContentFilterError`), leaving correct
+  agent behavior ungraded. Candidate fixes: a rubric preamble making the
+  grading context explicit, or a different judge model for that category.
 - **Validate the judges against human experts.** Right now their alignment
   with human judgment is assumed, not measured — every rubric was
   hand-authored with synthetic few-shot examples, not calibrated against
