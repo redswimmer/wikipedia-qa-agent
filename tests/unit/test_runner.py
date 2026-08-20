@@ -16,6 +16,7 @@ from pydantic_ai import (
     RunContext,
     UnexpectedModelBehavior,
 )
+from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import (
     ModelMessage,
     ModelResponse,
@@ -26,7 +27,7 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from app.agent import agent
-from app.runner import run_agent, run_agent_streaming
+from app.runner import DEFAULT_USAGE_LIMITS, run_agent, run_agent_streaming
 from tests.unit.fakes import (
     EXTRACT,
     TITLE,
@@ -80,6 +81,40 @@ def test_run_agent_with_no_tool_call_has_empty_tool_calls(wikipedia_mock_transpo
 
     assert transcript.tool_calls == []
     assert transcript.answer == "4"
+
+
+def _search_forever(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    """Reformulates a fresh query on every turn, never answering — the runaway
+    shape the 2026-08-10 eval runs caught live (59-76 searches on one case)."""
+    return _search(f"reworded query {len(messages)}")
+
+
+def test_run_agent_caps_runaway_searching(wikipedia_mock_transport):
+    """A model that reformulates queries forever must fail fast at the cap,
+    not burn budget indefinitely."""
+    with (
+        pytest.raises(UsageLimitExceeded),
+        httpx.Client(transport=wikipedia_mock_transport) as client,
+    ):
+        run_agent(agent, "runaway question", deps=client, model=FunctionModel(_search_forever))
+
+
+def test_run_agent_allows_searching_up_to_the_cap(wikipedia_mock_transport):
+    """The cap must not strangle legitimate multi-hop runs at its boundary."""
+    cap = DEFAULT_USAGE_LIMITS.tool_calls_limit
+    assert cap is not None
+
+    def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        searches = sum(1 for m in messages for part in m.parts if isinstance(part, ToolCallPart))
+        if searches < cap:
+            return _search(f"hop {searches}")
+        return ModelResponse(parts=[TextPart(content=EXTRACT)])
+
+    with httpx.Client(transport=wikipedia_mock_transport) as client:
+        transcript = run_agent(agent, "long multi-hop", deps=client, model=FunctionModel(model))
+
+    assert len(transcript.tool_calls) == cap
+    assert transcript.answer == EXTRACT
 
 
 def test_run_agent_propagates_exhausted_retries():

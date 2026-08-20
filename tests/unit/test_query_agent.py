@@ -4,6 +4,7 @@ Covers what a user sees: the answer streamed to stdout, tool progress to
 stderr, retries surfaced rather than swallowed, and colour only on a terminal.
 """
 
+import json
 import sys
 
 import httpx
@@ -104,3 +105,29 @@ def test_main_exits_with_a_friendly_message_when_the_api_key_is_blank(capsys, mo
 
     assert exc_info.value.code == 1
     assert "ANTHROPIC_API_KEY is not set" in capsys.readouterr().err
+
+
+def test_main_exits_with_a_friendly_message_when_the_search_cap_trips(capsys):
+    """A runaway run must end in a clean error, not a traceback mid-stream."""
+
+    def reword_forever(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        query = f"reworded {len(messages)}"
+        return ModelResponse(
+            parts=[ToolCallPart(tool_name="search_wikipedia", args={"query": query})]
+        )
+
+    async def reword_forever_stream(messages: list[ModelMessage], info: AgentInfo):
+        query = f"reworded {len(messages)}"
+        yield {0: DeltaToolCall(name="search_wikipedia", json_args=json.dumps({"query": query}))}
+
+    with pytest.raises(SystemExit) as exc_info:
+        query_agent.main(
+            ["runaway question"],
+            model_factory=lambda: FunctionModel(
+                reword_forever, stream_function=reword_forever_stream
+            ),
+            client_factory=lambda: httpx.Client(transport=httpx.MockTransport(wikipedia_handler())),
+        )
+
+    assert exc_info.value.code == 1
+    assert "too many searches" in capsys.readouterr().err
