@@ -252,6 +252,19 @@ added when error analysis showed that failure had no eval coverage and
 had already regressed once. The exact checks each dataset runs are
 covered in [Evals](#evals) above.
 
+One rule runs through the whole suite: **use the cheapest evaluator that
+can decide the check.** Objective properties — did it search, how many
+times, with which tool — are native, deterministic evaluators.
+LLM judges are reserved for what genuinely requires judgment: semantic
+correctness against a gold answer (where string matching would *pass*
+"New York City" against gold "Greenwich Village, New York City" and hide
+a real failure), whether every claim is grounded in the retrieved
+extracts, and refusal quality. The two kinds aren't a before-and-after —
+they found each other's blind spots: the error-analysis round below added
+three native checks and zero judges, while the judges are what caught the
+round's biggest failure mode (answers padded with unretrieved facts),
+which no deterministic check could see.
+
 ### Prompt Engineering Approach
 
 Two categories: the rubrics the LLM judges grade with, and the agent's own
