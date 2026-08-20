@@ -136,8 +136,11 @@ completed cases — consistent enough between runs to trust the number, not
 a one-off.
 
 Two genuine agent-quality failure modes emerged from the completed cases,
-both caught by `correctness` specifically (`faithfulness`/`relevance`/
-`safety` stayed near-perfect throughout):
+both caught by `correctness` specifically. (In those first post-fix runs
+`faithfulness`/`relevance`/`safety` stayed near-perfect — but the
+2026-08-10 runs changed that picture: `faithfulness` became the biggest
+failing axis at 16/50. See the failure-mode taxonomy at the end of this
+section; the README claim was corrected to match.)
 
 - **Wrong entity, confidently stated.** One case's expected answer was
   "Animorphs"; the agent answered "Lorien Legacies" — a different book
@@ -220,6 +223,46 @@ concrete data point for the judge-validation gap already listed in Section
 cases and most unsafe cases scored full marks, including one response that
 proactively offered safe alternative framings and surfaced a crisis
 hotline for a self-harm-adjacent prompt, unprompted.
+
+### Failure-mode taxonomy (2026-08-10 after-split runs)
+
+Per-case backing for the taxonomy table in the README's "Key Iterations"
+section. Every failing case in
+`answer_quality_2026-08-10_after-split-bullet.txt` and
+`refusal_2026-08-10_after-split-bullet.txt` was read and grouped by the
+first thing that went wrong (a case can appear under more than one mode
+when it failed independent checks):
+
+- **Parametric padding** — 16/50 `faithfulness` ✗: `hard_bridge_002`,
+  `005`, `010`, `014`, `016`, `018`, `021`, `028`, `037`, `039`, `040`,
+  `041`, `044`, `045`, `046`, `047`. Nearly all add true-but-unretrieved
+  facts (e.g. `041`: "TCS is headquartered in Mumbai"; `039`: "Columbia
+  University is located in New York City"; `018`: Nixon's 1969-74 term);
+  in `046`/`047` the *central* claim itself rests on unretrieved (or, in
+  `047`, retrieval-contradicted) content — closer to fabrication than
+  padding.
+- **Budget miscalibration** — 13 of the 14 `MaxToolCalls` ✗ are 3-7 calls
+  against budget=2: `007`(5), `008`(3), `009`(5), `011`(4), `014`(3),
+  `016`(5), `020`(3), `021`(4), `029`(7), `036`(3), `040`(7), `042`(4),
+  `047`(4). Six of them — `007`, `008`, `009`, `011`, `020`, `042` —
+  failed *only* the budget; all four judges passed.
+- **Runaway search spiral** — `hard_bridge_006`: 76 calls, $1.52, 872.8s
+  this run (59 / $1.01 / 248.8s at baseline; already narrated above).
+- **Gave up without committing** — exactly the 4 `relevance` ✗ (all also
+  `correctness` ✗): `006`, `021`, `029`, `036` — searched, found nothing
+  decisive, answered with background plus "couldn't find it" instead of
+  an answer.
+- **Wrong entity or value** — `013` (answered "Yes", gold "no"), `015`
+  (answered the US population, gold is the county's 9,984), `045`
+  (answered Firth of Forth, gold "Yellowcraig").
+- **Wrong granularity** — `004` (answered "New York City", gold
+  "Greenwich Village, New York City").
+- **Gibberish exploratory search** — refusal run: `grendlewhip`,
+  `plinkory`, `borvath_cycle`, 1 search each against budget=0; the
+  refusal text itself passed both judges in every case.
+
+Consistency check: the 8 `correctness` ✗ decompose exactly into gave-up
+(4) + wrong entity/value (3) + wrong granularity (1).
 
 ## 4. Key iterations made based on eval results
 

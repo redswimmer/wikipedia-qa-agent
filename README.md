@@ -258,9 +258,16 @@ Agent system prompt guidelines:
 - **Refusal was strong from the start.** Unanswerable and unsafe questions
   scored close to full marks with little iteration needed. One response to
   a self-harm-adjacent prompt proactively surfaced a crisis hotline,
-  unprompted — without being explicitly asked to. On the answer-quality
-  side, faithfulness, relevance, and safety stayed near-perfect throughout;
-  only correctness caught real misses.
+  unprompted — without being explicitly asked to.
+- **Faithfulness, not correctness, is the biggest failing axis on answer
+  quality.** In the latest committed run
+  ([raw report](evaluations/results/answer_quality_2026-08-10_after-split-bullet.txt)),
+  16/50 cases failed `faithfulness` versus 8/50 for `correctness`, while
+  `safety` never failed and `relevance` rarely did. Nearly all 16 share one
+  pattern: the answer is padded with facts recalled from the model's own
+  training memory rather than retrieved — often true (e.g. "TCS is
+  headquartered in Mumbai") but never present in any search result. See the
+  failure-mode taxonomy under [Key Iterations](#key-iterations).
 - **Agent sometimes answers from its own training knowledge instead of
   searching.** For well-known facts (e.g. the capital of France) that's
   arguably efficient, but the prompt instructs it to always search
@@ -285,7 +292,9 @@ Agent system prompt guidelines:
   performance as a consultant?"* — where "Aladin" collides with the far
   more famous "Aladdin" — the agent spiraled into 59 search attempts,
   $1.01, and over four minutes before still landing on the wrong answer.
-  I should cap tool calls in the agent to prevent runaways like this.
+  A later run reproduced it worse (76 calls, $1.52, ~15 minutes), so it's
+  repeatable, not a one-off. I should cap tool calls in the agent to
+  prevent runaways like this.
 
 ### Key Iterations
 
@@ -314,6 +323,32 @@ and was verified by re-running. Full before/after detail lives in
    probes searched. Isolated the cause by testing the split alone (3/3)
    against split-plus-example (0/3), dropped the example, kept the split —
    all before spending live eval budget confirming a regression.
+
+#### Next round (in progress): fixes driven by a failure-mode taxonomy
+
+Following the error-analysis method from [Hamel Husain's "Your AI Product
+Needs Evals"](https://hamel.dev/blog/posts/evals/): read every failing
+trace, group failures into named modes with counts, then fix the
+highest-impact ones — keeping a targeted eval per mode so a fix stays
+fixed. Reading every failure in the committed 2026-08-10 runs
+([answer quality](evaluations/results/answer_quality_2026-08-10_after-split-bullet.txt),
+[refusal](evaluations/results/refusal_2026-08-10_after-split-bullet.txt))
+gives this baseline (per-case backing in
+[`docs/eval_notes.md`](docs/eval_notes.md), Section 3):
+
+| Failure mode | Evidence (2026-08-10 run) | Example | Status |
+|---|---|---|---|
+| Answer padded with facts from the model's own memory, not retrieval | 16/50 failed `faithfulness` | "TCS is headquartered in Mumbai" — true, but in no search result | Open |
+| Tool-call budget too tight for genuinely multi-hop questions | 13/50 used 3–7 calls against a budget of 2; 6 of those passed **all four judges** and failed only the budget | "Who is older, X or Y?" needs one search per person — 3 calls, budget 2 | Open — likely an eval fix, not an agent fix |
+| Runaway search spiral on an ambiguous name | 1 case, reproduced in both runs: 59 then 76 calls, $1.01 then $1.52 | "Aladin" the consultant vs. the famous "Aladdin" | Open |
+| Searches, finds nothing, refuses to commit to an answer | 4/50 — all four `relevance` failures | Asked for a term, answered with background and "couldn't find it" | Open |
+| Confidently wrong entity or value | 3/50 `correctness` failures | Asked a county's population, answered the United States' | Open |
+| Right answer, wrong granularity | 1/50 `correctness` failures | "New York City" when the gold answer is "Greenwich Village, New York City" | Open |
+| One exploratory search on gibberish before refusing | 3/50 refusal cases, stochastic across the category; the refusal text itself passes both judges | "plinkory" searched once, then correctly called fake | Open — candidate spec fix: allow ≤1 search for gibberish, keep 0 for unsafe |
+
+Each row's loop: eval coverage that isolates the mode → a fix (prompt,
+agent code, or the eval itself where the spec is what's wrong) → re-run,
+flip Status to fixed with the before/after numbers.
 
 ### Future Work
 
