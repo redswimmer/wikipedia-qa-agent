@@ -45,7 +45,8 @@ def test_main_streams_the_answer_to_stdout_and_tool_progress_to_stderr(
     assert "Answer:" not in captured.err
     assert "Tool calls:" in captured.err
     assert f"→ search_wikipedia(query='{TITLE}')" in captured.err
-    assert f"← {EXTRACT}" in captured.err
+    assert f"← [1] {TITLE}:" in captured.err
+    assert EXTRACT in captured.err
 
 
 def test_main_reports_a_failed_search_as_a_retry_in_the_progress_log(capsys):

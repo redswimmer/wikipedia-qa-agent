@@ -26,22 +26,38 @@ def build_wikipedia_client(
     )
 
 
-def parse_search_title(response_json: dict) -> str | None:
-    """Pure: pull the best-matching page title out of a MediaWiki search response."""
+# How many search results the tool returns extracts for. Replaying real agent
+# queries against HotpotQA's gold supporting articles showed the needed article
+# ranked #2-3 in 5/50 cases — returned by the search API, then discarded when
+# only the top hit was kept.
+TOP_N_RESULTS = 3
+
+
+def parse_search_titles(response_json: dict) -> list[str]:
+    """Pure: pull the top matching page titles out of a MediaWiki search response."""
     results = response_json.get("query", {}).get("search", [])
-    if not results:
-        return None
-    return results[0].get("title")
+    return [title for r in results if (title := r.get("title"))]
 
 
-def parse_extract(response_json: dict) -> str | None:
-    """Pure: pull the plain-text extract out of a MediaWiki extracts response."""
+def parse_extracts(response_json: dict) -> dict[str, str]:
+    """Pure: map page title -> plain-text extract from a MediaWiki extracts
+    response, skipping pages with blank extracts (e.g. the -1 miss sentinel)."""
     pages = response_json.get("query", {}).get("pages", {})
-    for page in pages.values():
-        extract = page.get("extract", "").strip()
-        if extract:
-            return extract
-    return None
+    return {
+        title: extract
+        for page in pages.values()
+        if (title := page.get("title")) and (extract := page.get("extract", "").strip())
+    }
+
+
+def format_extracts(titles: list[str], extracts_by_title: dict[str, str]) -> str:
+    """Pure: label each extract with its article title, in search-rank order."""
+    sections = [
+        f"[{rank}] {title}:\n{extracts_by_title[title]}"
+        for rank, title in enumerate(titles, start=1)
+        if title in extracts_by_title
+    ]
+    return "\n\n".join(sections)
 
 
 def _raise_for_transient_status(response: httpx.Response) -> None:
@@ -53,16 +69,23 @@ def _raise_for_transient_status(response: httpx.Response) -> None:
 
 
 def search_wikipedia(ctx: RunContext[httpx.Client], query: str) -> str:
-    """Search Wikipedia and return a plain-text extract of the best-matching article."""
+    """Search Wikipedia and return plain-text intro extracts of the top matching
+    articles, each labeled with its title."""
     client = ctx.deps
 
     search_response = client.get(
         MEDIAWIKI_API_URL,
-        params={"action": "query", "list": "search", "srsearch": query, "format": "json"},
+        params={
+            "action": "query",
+            "list": "search",
+            "srsearch": query,
+            "srlimit": TOP_N_RESULTS,
+            "format": "json",
+        },
     )
     _raise_for_transient_status(search_response)
-    title = parse_search_title(search_response.json())
-    if title is None:
+    titles = parse_search_titles(search_response.json())
+    if not titles:
         raise ModelRetry(f"No Wikipedia article found for query: {query!r}. Try a different query.")
 
     extract_response = client.get(
@@ -72,15 +95,15 @@ def search_wikipedia(ctx: RunContext[httpx.Client], query: str) -> str:
             "prop": "extracts",
             "explaintext": True,
             "exintro": True,
-            "titles": title,
+            "titles": "|".join(titles),
             "format": "json",
         },
     )
     _raise_for_transient_status(extract_response)
-    extract = parse_extract(extract_response.json())
-    if extract is None:
+    formatted = format_extracts(titles, parse_extracts(extract_response.json()))
+    if not formatted:
         raise ModelRetry(
-            f"Found article {title!r} but it has no text extract. Try a different query."
+            f"Found articles for {query!r} but none had a text extract. Try a different query."
         )
 
-    return extract
+    return formatted

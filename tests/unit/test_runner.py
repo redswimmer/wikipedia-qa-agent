@@ -31,6 +31,7 @@ from app.runner import DEFAULT_USAGE_LIMITS, run_agent, run_agent_streaming
 from tests.unit.fakes import (
     EXTRACT,
     TITLE,
+    TOOL_RESULT,
     MediaWiki,
     search_then_answer,
     streaming_model,
@@ -68,7 +69,7 @@ def test_run_agent_records_tool_call_and_answer(wikipedia_mock_transport):
     assert len(transcript.tool_calls) == 1
     assert transcript.tool_calls[0].tool_name == "search_wikipedia"
     assert transcript.tool_calls[0].args == {"query": TITLE}
-    assert transcript.tool_calls[0].result == EXTRACT
+    assert transcript.tool_calls[0].result == TOOL_RESULT
     assert transcript.answer == EXTRACT
 
 
@@ -156,7 +157,7 @@ def test_run_agent_records_failed_retry_before_successful_call():
 
     assert [c.args["query"] for c in transcript.tool_calls] == ["nonexistent", TITLE]
     assert transcript.tool_calls[0].result.startswith("[retry]")
-    assert transcript.tool_calls[1].result == EXTRACT
+    assert transcript.tool_calls[1].result == TOOL_RESULT
 
 
 def test_run_agent_streaming_records_the_same_transcript_and_emits_events(wikipedia_mock_transport):
@@ -179,7 +180,7 @@ def test_run_agent_streaming_records_the_same_transcript_and_emits_events(wikipe
     transcript = asyncio.run(run())
 
     assert [c.tool_name for c in transcript.tool_calls] == ["search_wikipedia"]
-    assert transcript.tool_calls[0].result == EXTRACT
+    assert transcript.tool_calls[0].result == TOOL_RESULT
     assert transcript.answer == EXTRACT
     assert [e.part.tool_name for e in received if isinstance(e, FunctionToolCallEvent)] == [
         "search_wikipedia"

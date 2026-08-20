@@ -11,12 +11,13 @@ from pydantic_ai import ModelRetry
 
 from app.tools import (
     MEDIAWIKI_API_URL,
+    TOP_N_RESULTS,
     WIKIPEDIA_USER_AGENT,
     build_wikipedia_client,
-    parse_extract,
+    parse_extracts,
     search_wikipedia,
 )
-from tests.unit.fakes import EXTRACT, TITLE, Handler, wikipedia_handler
+from tests.unit.fakes import EXTRACT, RUNNER_UP, TITLE, TOOL_RESULT, Handler, wikipedia_handler
 
 
 def _client(handler: Handler, recorder: list[httpx.Request] | None = None) -> httpx.Client:
@@ -49,13 +50,14 @@ def test_search_request_sends_the_documented_mediawiki_parameters(tool_context):
         "action": "query",
         "list": "search",
         "srsearch": "ada lovelace",
+        "srlimit": str(TOP_N_RESULTS),
         "format": "json",
     }
 
 
-def test_extract_request_asks_for_the_plaintext_intro_of_the_matched_title(tool_context):
+def test_extract_request_asks_for_the_plaintext_intros_of_the_matched_titles(tool_context):
     """`explaintext` keeps HTML out of the model's context and `exintro` keeps
-    the whole article from flooding it — dropping either degrades every answer."""
+    whole articles from flooding it — dropping either degrades every answer."""
     _, extract = _requests_for("ada lovelace", tool_context)
 
     assert dict(extract.url.params) == {
@@ -63,17 +65,17 @@ def test_extract_request_asks_for_the_plaintext_intro_of_the_matched_title(tool_
         "prop": "extracts",
         "explaintext": "true",
         "exintro": "true",
-        "titles": TITLE,
+        "titles": f"{TITLE}|{RUNNER_UP}",
         "format": "json",
     }
 
 
-def test_extract_is_fetched_for_the_title_search_returned_not_the_raw_query(tool_context):
+def test_extracts_are_fetched_for_the_titles_search_returned_not_the_raw_query(tool_context):
     """Passing the query straight through would silently fetch the wrong article
     for every query that isn't already an exact page title."""
     _, extract = _requests_for("who wrote the first program", tool_context)
 
-    assert extract.url.params["titles"] == TITLE
+    assert extract.url.params["titles"].split("|") == [TITLE, RUNNER_UP]
 
 
 def test_requests_carry_a_policy_compliant_user_agent(tool_context):
@@ -87,9 +89,12 @@ def test_requests_carry_a_policy_compliant_user_agent(tool_context):
     assert "https://" in agent or "@" in agent
 
 
-def test_returns_the_extract_text(tool_context):
+def test_returns_labeled_extracts_for_every_search_hit(tool_context):
+    """Search results beyond the top hit must reach the model, labeled by
+    title in rank order — the top-1-only design silently discarded the right
+    article whenever it ranked #2-3 (5/50 cases in the retrieval replay)."""
     with _client(wikipedia_handler()) as client:
-        assert search_wikipedia(tool_context(client), "ada lovelace") == EXTRACT
+        assert search_wikipedia(tool_context(client), "ada lovelace") == TOOL_RESULT
 
 
 # --- retry / error boundaries ------------------------------------------------
@@ -108,7 +113,7 @@ def test_no_search_results_asks_the_model_for_a_different_query(tool_context):
 def test_empty_extract_asks_the_model_for_a_different_query(tool_context):
     with (
         _client(wikipedia_handler(extract="")) as client,
-        pytest.raises(ModelRetry, match="no text extract"),
+        pytest.raises(ModelRetry, match="none had a text extract"),
     ):
         search_wikipedia(tool_context(client), "ada lovelace")
 
@@ -138,9 +143,18 @@ def test_permanent_failures_raise_instead_of_burning_the_retry_budget(tool_conte
 # branch is observable through search_wikipedia and is asserted there instead.
 
 
-def test_parse_extract_skips_blank_extracts_and_returns_the_first_real_one():
+def test_parse_extracts_skips_blank_and_untitled_pages():
     """MediaWiki keys `pages` by opaque page id and returns a -1 sentinel page
-    with a blank extract on a miss, so the skip-blank loop is the fiddly bit."""
-    response_json = {"query": {"pages": {"-1": {"extract": "  "}, "12345": {"extract": EXTRACT}}}}
+    with a blank extract on a miss, so the skip-blank filtering is the fiddly
+    bit — a blank or untitled page must not shadow a real one."""
+    response_json = {
+        "query": {
+            "pages": {
+                "-1": {"title": "Missing Page", "extract": "  "},
+                "7": {"extract": "orphaned extract with no title"},
+                "12345": {"title": TITLE, "extract": EXTRACT},
+            }
+        }
+    }
 
-    assert parse_extract(response_json) == EXTRACT
+    assert parse_extracts(response_json) == {TITLE: EXTRACT}
