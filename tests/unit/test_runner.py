@@ -23,6 +23,7 @@ from pydantic_ai.messages import (
     RetryPromptPart,
     TextPart,
     ToolCallPart,
+    ToolReturnPart,
 )
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
@@ -90,9 +91,26 @@ def _search_forever(messages: list[ModelMessage], info: AgentInfo) -> ModelRespo
     return _search(f"reworded query {len(messages)}")
 
 
+def test_run_agent_soft_cap_yields_an_answer_from_a_compliant_model(wikipedia_mock_transport):
+    """The graceful path: a model that stops when the tool says to answers from
+    what it has, so the case is gradeable instead of an error row."""
+
+    def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        last = messages[-1].parts[-1]
+        if isinstance(last, ToolReturnPart) and "Answer now" in str(last.content):
+            return ModelResponse(parts=[TextPart(content="Couldn't find it; here's what I have.")])
+        return _search(f"reworded {len(messages)}")
+
+    with httpx.Client(transport=wikipedia_mock_transport) as client:
+        transcript = run_agent(agent, "unfindable", deps=client, model=FunctionModel(model))
+
+    assert transcript.answer == "Couldn't find it; here's what I have."
+    assert "Answer now" in transcript.tool_calls[-1].result  # the stop is auditable too
+
+
 def test_run_agent_caps_runaway_searching(wikipedia_mock_transport):
-    """A model that reformulates queries forever must fail fast at the cap,
-    not burn budget indefinitely."""
+    """The hard backstop: a model that ignores the tool's answer-now instruction
+    and keeps calling anyway must still fail fast, not burn budget forever."""
     with (
         pytest.raises(UsageLimitExceeded),
         httpx.Client(transport=wikipedia_mock_transport) as client,

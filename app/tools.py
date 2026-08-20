@@ -32,6 +32,18 @@ def build_wikipedia_client(
 # only the top hit was kept.
 TOP_N_RESULTS = 3
 
+# Soft search budget per run: past this, the tool stops searching and tells the
+# model to answer from what it already has — so a hard question still yields a
+# gradeable, auditable answer instead of an error. Legitimate multi-hop cases
+# topped out at 5 searches; the runner's UsageLimits is the hard backstop for
+# a model that ignores the instruction.
+SOFT_SEARCH_CAP = 8
+_SOFT_CAP_MESSAGE = (
+    "Search limit reached for this question — no more searches will run. "
+    "Answer now using only the extracts you have already retrieved, and "
+    "plainly say what you could not find."
+)
+
 
 def parse_search_titles(response_json: dict) -> list[str]:
     """Pure: pull the top matching page titles out of a MediaWiki search response."""
@@ -71,6 +83,8 @@ def _raise_for_transient_status(response: httpx.Response) -> None:
 def search_wikipedia(ctx: RunContext[httpx.Client], query: str) -> str:
     """Search Wikipedia and return plain-text intro extracts of the top matching
     articles, each labeled with its title."""
+    if ctx.usage.tool_calls >= SOFT_SEARCH_CAP:
+        return _SOFT_CAP_MESSAGE
     client = ctx.deps
 
     search_response = client.get(

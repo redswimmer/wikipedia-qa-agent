@@ -11,6 +11,7 @@ from pydantic_ai import ModelRetry
 
 from app.tools import (
     MEDIAWIKI_API_URL,
+    SOFT_SEARCH_CAP,
     TOP_N_RESULTS,
     WIKIPEDIA_USER_AGENT,
     build_wikipedia_client,
@@ -87,6 +88,20 @@ def test_requests_carry_a_policy_compliant_user_agent(tool_context):
     agent = agents.pop()
     assert not agent.startswith("python-httpx")
     assert "https://" in agent or "@" in agent
+
+
+def test_soft_cap_stops_searching_and_asks_for_an_answer(tool_context):
+    """Past the soft budget the tool must not touch the network — it returns an
+    answer-now instruction so a hard question still yields a gradeable answer
+    instead of an error (the pre-cap alternative was a 76-search spiral)."""
+    recorded: list[httpx.Request] = []
+    with _client(wikipedia_handler(), recorded) as client:
+        ctx = tool_context(client)
+        ctx.usage.tool_calls = SOFT_SEARCH_CAP
+        result = search_wikipedia(ctx, "one query too many")
+
+    assert "Answer now" in result
+    assert recorded == []
 
 
 def test_returns_labeled_extracts_for_every_search_hit(tool_context):

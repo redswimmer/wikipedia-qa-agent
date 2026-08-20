@@ -12,11 +12,13 @@ from pydantic_ai.messages import RetryPromptPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.models import KnownModelName, Model
 from pydantic_ai.usage import UsageLimits
 
-# Hard ceiling on searches per run. The 2026-08-10 eval runs put every
-# legitimate multi-hop case at <=7 tool calls while the one pathological case
-# spiraled to 59-76 ($1.01-$1.52, up to 15 minutes; see evaluations/results/).
-# 8 leaves legitimate runs headroom while a spiral fails in seconds instead.
-DEFAULT_USAGE_LIMITS = UsageLimits(tool_calls_limit=8)
+# Hard backstop on tool calls per run. The *soft* stop lives in the tool
+# itself (app.tools.SOFT_SEARCH_CAP = 8): past it, search_wikipedia returns an
+# answer-now instruction instead of searching, so hard questions still produce
+# a gradeable answer. This limit only trips for a model that ignores that
+# instruction and keeps calling anyway — it turns the 59-76-call spirals the
+# 2026-08 runs recorded ($1.01-$1.52, up to 15 minutes) into a fast error.
+DEFAULT_USAGE_LIMITS = UsageLimits(tool_calls_limit=12)
 
 
 class ToolCallRecord(BaseModel):
