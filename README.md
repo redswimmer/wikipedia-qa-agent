@@ -22,7 +22,7 @@ uv sync
 cp .env.example .env
 ```
 ### Basic Search
-Simple query which require a single Wikipedia search tool call.
+A simple query that requires a single Wikipedia search tool call.
 
 Query:
 
@@ -47,7 +47,7 @@ Eiffel's company from 1887 to 1889 as the centerpiece of the 1889 World's
 Fair in Paris.
 ```
 ### Multi-Tool Use Search
-More complex query which requires multiple Wikipedia search tool calls.
+A more complex query that requires multiple Wikipedia search tool calls.
 
 Query:
 
@@ -121,9 +121,9 @@ tests/
 
 ## Evals
 
-I chose to grade the agent along two dimensions in order to evaluate correctness:
-1. Knowing when to refuse
-2. Answer quality
+I grade the agent along two quality dimensions — knowing when to refuse,
+and answer quality — plus one regression-guard dataset (search
+discipline) born from an observed failure mode:
 
 > **Reviewing the prompts?** The agent's system prompt is
 > [`app/prompts.py`](app/prompts.py); each judge rubric is its own file in
@@ -182,7 +182,7 @@ uv run python -m evaluations.run answer_quality
   `search_wikipedia` actually retrieved, not fabricated?
 - `LLMJudge` (relevance) — does the answer address the specific question
   asked?
-- `LLMJudge` (safety) — is the agent's response safe.
+- `LLMJudge` (safety) — is the agent's response safe?
 
 ### Search Discipline
 
@@ -247,7 +247,7 @@ decisions that deliver this:
 
 ### What I Measure and Why
 
-I grade the agent along two dimensions to evaluate correctness:
+I grade the agent along two quality dimensions:
 
 - **Refusal** — does the agent recognize when a question shouldn't be
   answered at all, rather than guessing or searching for nonsense? See
@@ -303,9 +303,8 @@ abstract description. The full prompt text is in
 
 Agent system prompt guidelines:
 
-- **Decide whether the question is answerable at all** — guides whether this is an
-  answerable question, or something incoherent, unanswerable in
-  principle, or unsafe to answer.
+- **Decide whether the question is answerable at all** — or is instead
+  incoherent, unanswerable in principle, or unsafe to answer.
 - **Wikipedia search before answering** — directs the model to search and 
   not answer from its own training data.
 - **Keep search queries short and specific**, directs the model to avoid 
@@ -313,11 +312,13 @@ Agent system prompt guidelines:
   Wikipedia search query.
 - **Retry with a different query, at most two or three times** — then stop
   and answer with what was found and what's missing, rather than generating
-  query variations forever (the ceiling came from iteration 5's runaway).
+  query variations forever (the ceiling came from the runaway failure in
+  [Key Iterations](#key-iterations)).
 - **Ground the answer in the retrieved extracts, and only the extracts.**
   Every specific claim must appear in what was retrieved — no facts from
   the model's own knowledge, even true ones, even as background (the
-  "even true ones" came from iteration 6's padding failures).
+  "even true ones" came from the padding failures in
+  [Key Iterations](#key-iterations)).
 - **Don't narrate the search process** — answer directly, without
   narration or reference to these instructions.
 
@@ -336,9 +337,8 @@ Agent system prompt guidelines:
   inconclusive, and reported as such. Still the biggest open axis.
 - **The agent sometimes skips the search entirely on easy trivia**,
   answering from its own knowledge despite the "always search"
-  instruction. The failure is stochastic — manual probes passed 3/3, yet
-  the committed `search_discipline` dataset caught "What is the capital
-  of France?" at zero searches on its first live run (see
+  instruction — and the failure is stochastic, so manual spot-checks kept
+  missing it. Now guarded by a committed dataset (see
   [Search Discipline](#search-discipline)).
 - **Judging is its own engineering problem.** The rubrics needed
   iteration (few-shot examples in `<examples>` tags, strict binary
