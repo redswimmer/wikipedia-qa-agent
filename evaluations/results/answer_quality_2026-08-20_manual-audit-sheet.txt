@@ -1,0 +1,398 @@
+Legend: prior marks = correctness/faithfulness/relevance/safety in run B | confirm
+
+==============================================================================================================
+CASE hard_comparison_000_were_scott_derrickson_and_ed_wood
+Q: Were Scott Derrickson and Ed Wood of the same nationality?
+GOLD: yes
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=False
+QUERIES: ['Scott Derrickson', 'Ed Wood']
+ANSWER: Yes — both Scott Derrickson and Ed Wood (Edward Davis Wood Jr.) were American filmmakers.
+==============================================================================================================
+CASE hard_bridge_001_what_government_position_was_held_by
+Q: What government position was held by the woman who portrayed Corliss Archer in the film Kiss and Tell?
+GOLD: Chief of Protocol
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Kiss and Tell (1945 film) Corliss Archer', 'Shirley Temple ambassador']
+ANSWER: Shirley Temple, who played Corliss Archer in the 1945 film *Kiss and Tell*, went on to a diplomatic career. She served as **United States Ambassador to Ghana** and later as **United States Ambassador to Czechoslovakia**, and she was also the first female **Chief of Protocol of the United States**.
+==============================================================================================================
+CASE hard_bridge_002_what_science_fantasy_young_adult_series
+Q: What science fantasy young adult series, told in first person, has a set of companion books narrating the stories of enslaved worlds and alien species?
+GOLD: Animorphs
+prior: B=✔✗✔✔  C=✔✗✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['science fantasy young adult series companion books enslaved worlds alien species', 'Animorphs companion books Hork-Bajir Chronicles Andalite Chronicles']
+ANSWER: The series is **Animorphs**, by K. A. Applegate (Katherine Applegate and Michael Grant). It's a science fantasy middle-grade/YA series told entirely in first person, with narration alternating among the main characters. Its companion collection, the **Animorphs Chronicles**, consists of four books — *The Andalite Chronicles*, *The Hork-Bajir Chronicles*, *Visser*, and *The Ellimist Chronicles* — which tell the backstories of various alien races, including the Hork-Bajir, a species enslaved by the parasitic Yeerks, and other alien worlds and species central to the series' war narrative.
+==============================================================================================================
+CASE hard_comparison_003_are_the_laleli_mosque_and_esma
+Q: Are the Laleli Mosque and Esma Sultan Mansion located in the same neighborhood?
+GOLD: no
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Laleli Mosque', 'Esma Sultan Mansion']
+ANSWER: No — the Laleli Mosque is located in the Laleli neighborhood of Fatih, Istanbul, while the Esma Sultan Mansion is located in the Ortaköy neighborhood of Istanbul (on the Bosphorus). These are two different neighborhoods.
+==============================================================================================================
+CASE hard_bridge_004_the_director_of_the_romantic_comedy
+Q: The director of the romantic comedy "Big Stone Gap" is based in what New York city?
+GOLD: Greenwich Village, New York City
+prior: B=✔✔✔✔  C=✗✔✔✔
+auto: gold_in_answer=False  gold_in_extracts=False
+QUERIES: ['Big Stone Gap (film)']
+ANSWER: The director, Adriana Trigiani, is based in New York City.
+==============================================================================================================
+CASE hard_bridge_005_2014_s_s_is_the_debut
+Q: 2014 S/S is the debut album of a South Korean boy group that was formed by who?
+GOLD: YG Entertainment
+prior: B=✔✔✔✔  C=✔✗✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['2014 S/S album', 'Winner (South Korean band)']
+ANSWER: 2014 S/S is the debut studio album of Winner, a South Korean boy band formed by YG Entertainment in 2013. The group debuted with this album on August 17, 2014.
+==============================================================================================================
+CASE hard_bridge_006_who_was_known_by_his_stage
+Q: Who was known by his stage name Aladin and helped organizations improve their performance as a consultant?
+GOLD: Eenasul Fateh
+prior: B=????  C=????
+ERROR: UsageLimitExceeded: The next tool call(s) would exceed the tool_calls_limit of 8 (tool_calls=10). Consider raising the l
+==============================================================================================================
+CASE hard_bridge_007_the_arena_where_the_lewiston_maineiacs
+Q: The arena where the Lewiston Maineiacs played their home games can seat how many people?
+GOLD: 3,677 seated
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Lewiston Maineiacs']
+ANSWER: The Lewiston Maineiacs played at the Androscoggin Bank Colisée (now known simply as The Colisée) in Lewiston, Maine. The arena has a capacity of 4,000 (with 3,677 seated).
+==============================================================================================================
+CASE hard_bridge_008_who_is_older_annie_morton_or
+Q: Who is older, Annie Morton or Terry Richardson?
+GOLD: Terry Richardson
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Annie Morton', 'Terry Richardson']
+ANSWER: Terry Richardson (born August 14, 1965) is older than Annie Morton (born October 8, 1970).
+==============================================================================================================
+CASE hard_comparison_009_are_local_h_and_for_against
+Q: Are Local H and For Against both from the United States?
+GOLD: yes
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Local H band', 'For Against band', 'For Against Lincoln Nebraska band']
+ANSWER: Yes — both bands are from the United States. Local H is an American rock band formed in 1990 in Zion, Illinois (now based in Chicago), and For Against is an American post-punk/dream pop band from Lincoln, Nebraska.
+==============================================================================================================
+CASE hard_bridge_010_what_is_the_name_of_the
+Q: What is the name of the fight song of the university whose main campus is in Lawrence, Kansas and whose branch campuses are in the Kansas City metropolitan area?
+GOLD: Kansas Song
+prior: B=✔✗✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['University of Kansas fight song']
+ANSWER: The university you're referring to is the **University of Kansas** (main campus in Lawrence, with additional campuses in the Kansas City metro area, including its medical center in Kansas City, Kansas, and Overland Park, Kansas). One of its fight songs is **"Kansas Song (We're From Kansas)."** The university actually has several fight songs, and it also traditionally plays "Home on the Range" at the end of home athletic events, though that piece is Kansas's official state song rather than being written specifically as a KU fight song.
+==============================================================================================================
+CASE hard_bridge_011_what_screenwriter_with_credits_for_evolution
+Q: What screenwriter with credits for "Evolution" co-wrote a film starring Nicolas Cage and Téa Leoni?
+GOLD: David Weissman
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Evolution 2001 film', 'The Family Man 2000 film screenwriters', 'The Family Man (film)']
+ANSWER: Both David Diamond and David Weissman co-wrote *Evolution* (2001) and also wrote *The Family Man* (2000), the romantic fantasy comedy-drama starring Nicolas Cage and Téa Leoni.
+==============================================================================================================
+CASE hard_bridge_012_what_year_did_guns_n_roses
+Q: What year did Guns N Roses perform a promo for a movie starring Arnold Schwarzenegger as a former New York Police detective?
+GOLD: 1999
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['End of Days (film) Arnold Schwarzenegger', "Guns N' Roses Oh My God End of Days"]
+ANSWER: In 1999, Guns N' Roses released "Oh My God" as a radio promo for *End of Days*, the Arnold Schwarzenegger film in which he plays former NYPD detective Jericho Cane. The song was sent to radio stations in November 1999 to promote the film's soundtrack.
+==============================================================================================================
+CASE hard_comparison_013_are_random_house_tower_and_888
+Q: Are Random House Tower and 888 7th Avenue both used for real estate?
+GOLD: no
+prior: B=✗✔✔✔  C=✗✗✔✔
+auto: gold_in_answer=False  gold_in_extracts=True
+QUERIES: ['Random House Tower', '888 7th Avenue']
+ANSWER: Yes. Both buildings are used for real estate (in the sense of being commercial/mixed-use real estate properties). Random House Tower is a mixed-use skyscraper in Midtown Manhattan owned by real estate companies SL Green Realty and Ivanhoé Cambridge, combining office space (Penguin Random House headquarters) with a luxury apartment complex. Similarly, 888 Seventh Avenue is an office skyscraper in Midtown Manhattan that currently serves as the corporate headquarters of Vornado Realty Trust. Both are real estate properties housing offices and, in Random House Tower's case, residential units as well.
+==============================================================================================================
+CASE hard_bridge_014_the_football_manager_who_recruited_david
+Q: The football manager who recruited David Beckham managed Manchester United during what timeframe?
+GOLD: from 1986 to 2013
+prior: B=✔✗✔✔  C=✔✗✔✔
+auto: gold_in_answer=False  gold_in_extracts=True
+QUERIES: ['David Beckham Manchester United recruited by', 'Alex Ferguson Manchester United manager tenure']
+ANSWER: Alex Ferguson, who signed David Beckham to Manchester United's youth/first team, managed Manchester United from November 1986 to 2013 (26 years), during which he won 38 trophies including 13 Premier League titles and two UEFA Champions League titles.
+==============================================================================================================
+CASE hard_bridge_015_brown_state_fishing_lake_is_in
+Q: Brown State Fishing Lake is in a country that has a population of how many inhabitants ?
+GOLD: 9,984
+prior: B=✗✔✔✔  C=✗✔✔✔
+auto: gold_in_answer=False  gold_in_extracts=False
+QUERIES: ['Brown State Fishing Lake', 'United States population']
+ANSWER: Brown State Fishing Lake is located in Brown County, Kansas, in the United States. As of July 1, 2025, the estimated population of the United States is about 341,784,857 people.
+==============================================================================================================
+CASE hard_bridge_016_the_vermont_catamounts_men_s_soccer
+Q: The Vermont Catamounts men's soccer team currently competes in a conference that was formerly known as what from 1988 to 1996?
+GOLD: the North Atlantic Conference
+prior: B=✔✗✔✔  C=✗✔✗✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ["Vermont Catamounts men's soccer conference", 'America East Conference former name North Atlantic Conference', 'America East Conference history renamed 1996 North Atlantic Conference', 'ECAC North Atlantic Conference 1988 1996 name change', '"North Atlantic Conference" America East 1979 1988 1996']
+ANSWER: This confirms it: the America East Conference was formerly known as the **North Atlantic Conference** before being renamed America East. Based on that timeframe (the conference used the North Atlantic Conference name until it rebranded as America East in 1996), that is the answer to your question.
+==============================================================================================================
+CASE hard_comparison_017_are_giuseppe_verdi_and_ambroise_thomas
+Q: Are Giuseppe Verdi and Ambroise Thomas both Opera composers ?
+GOLD: yes
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=False
+QUERIES: ['Giuseppe Verdi', 'Ambroise Thomas']
+ANSWER: Yes — both Giuseppe Verdi and Ambroise Thomas were opera composers. Verdi (1813–1901) was an Italian composer famous for operas such as *Rigoletto*, *La traviata*, *Aida*, and *Otello*. Thomas (1811–1896) was a French composer best known for his operas *Mignon* (1866) and *Hamlet* (1868), and he wrote over twenty operas during his career.
+==============================================================================================================
+CASE hard_bridge_018_roger_o_egeberg_was_assistant_secretary
+Q: Roger O. Egeberg was Assistant Secretary for Health and Scientific Affairs during the administration of a president that served during what years?
+GOLD: 1969 until 1974
+prior: B=✔✔✔✔  C=✔✗✔✔
+auto: gold_in_answer=False  gold_in_extracts=False
+QUERIES: ['Roger O. Egeberg', 'Richard Nixon presidency years']
+ANSWER: Roger O. Egeberg served as Assistant Secretary for Health and Scientific Affairs under President Richard Nixon, who was in office from January 20, 1969, until his resignation on August 9, 1974.
+==============================================================================================================
+CASE hard_comparison_019_which_writer_was_from_england_henry
+Q: Which writer was from England, Henry Roth or Robert Erskine Childers?
+GOLD: Robert Erskine Childers DSC
+prior: B=✔✗✔✔  C=✔✗✔✔
+auto: gold_in_answer=False  gold_in_extracts=False
+QUERIES: ['Henry Roth writer', 'Robert Erskine Childers']
+ANSWER: Robert Erskine Childers was the one from England — he was described as "English-born Irish nationalist" and writer of *The Riddle of the Sands*. Henry Roth, by contrast, was an American novelist (born in Austria-Hungary but raised and known as an American writer).
+==============================================================================================================
+CASE hard_bridge_020_which_other_mexican_formula_one_race
+Q: Which other Mexican Formula One race car driver has held the podium besides the Force India driver born in 1990?
+GOLD: Pedro Rodríguez
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Sergio Pérez Formula One', 'Mexican Formula One drivers podium', 'Pedro Rodríguez Formula One driver']
+ANSWER: Pedro Rodríguez is the other Mexican Formula One driver who has held the podium besides Sergio Pérez (born 1990, who drove for Force India). Pedro Rodríguez raced in F1 from 1963 to 1971, winning two Grands Prix (the 1967 South African Grand Prix and the 1970 Belgian Grand Prix) and achieving multiple podium finishes during his career.
+==============================================================================================================
+CASE hard_bridge_021_this_singer_of_a_rather_blustery
+Q: This singer of A Rather Blustery Day also voiced what hedgehog?
+GOLD: Sonic
+prior: B=✗✗✔✔  C=✗✗✗✔
+ERROR: UsageLimitExceeded: The next tool call(s) would exceed the tool_calls_limit of 8 (tool_calls=9). Consider raising the li
+==============================================================================================================
+CASE hard_bridge_022_aside_from_the_apple_remote_what
+Q: Aside from the Apple Remote, what other device can control the program Apple Remote was originally designed to interact with?
+GOLD: keyboard function keys
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Apple Remote', 'Front Row (software)']
+ANSWER: The Apple Remote was originally designed to control **Front Row**, Apple's media center software for Mac computers. Aside from the Apple Remote itself, Front Row could also be controlled using the **keyboard function keys** on the Mac.
+==============================================================================================================
+CASE hard_comparison_023_which_performance_act_has_a_higher
+Q: Which performance act has a higher instrument to person ratio, Badly Drawn Boy or Wolf Alice? 
+GOLD: Badly Drawn Boy
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Badly Drawn Boy', 'Wolf Alice band']
+ANSWER: **Badly Drawn Boy** has the higher instrument-to-person ratio. He is a solo artist (Damon Gough performing under that name) described as a "multi-instrumentalist," meaning one person plays many instruments — giving a ratio well above 1:1. Wolf Alice, by contrast, is a four-piece band (vocals/guitar, guitar, bass, drums), so their ratio is essentially 1:1 (one instrument/role per member).
+==============================================================================================================
+CASE hard_bridge_024_what_was_the_father_of_kasper
+Q: What was the father of Kasper Schmeichel voted to be by the IFFHS in 1992?
+GOLD: World's Best Goalkeeper
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Peter Schmeichel']
+ANSWER: Kasper Schmeichel's father, Peter Schmeichel, was voted the IFFHS World's Best Goalkeeper in 1992.
+==============================================================================================================
+CASE hard_bridge_025_who_was_the_writer_of_these
+Q: Who was the writer of These Boots Are Made for Walkin' and who died in 2007?
+GOLD: Barton Lee Hazlewood
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=False  gold_in_extracts=True
+QUERIES: ["These Boots Are Made for Walkin'", 'Lee Hazlewood death']
+ANSWER: "These Boots Are Made for Walkin'" was written by Lee Hazlewood, the American songwriter and record producer best known for his work with Nancy Sinatra and Duane Eddy. Hazlewood died on August 4, 2007, at age 78.
+==============================================================================================================
+CASE hard_bridge_026_the_2011_12_vcu_rams_men
+Q: The 2011–12 VCU Rams men's basketball team, led by third year head coach Shaka Smart, represented Virginia Commonwealth University which was founded in what year?
+GOLD: 1838
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Virginia Commonwealth University']
+ANSWER: Virginia Commonwealth University traces its founding to 1838, when it began as the medical department of Hampden–Sydney College (later becoming the Medical College of Virginia in 1854). The university took its current form and name in 1968, when the Virginia General Assembly merged MCV with the Richmond Professional Institute (founded 1917).
+==============================================================================================================
+CASE hard_comparison_027_are_both_dictyosperma_and_huernia_described
+Q: Are both Dictyosperma, and Huernia described as a genus?
+GOLD: yes
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=False
+QUERIES: ['Dictyosperma', 'Huernia']
+ANSWER: Yes. Both are described as genera: Dictyosperma is a monotypic genus of palm (family Arecaceae) native to the Mascarene Islands, and Huernia is a genus of stem succulents (family Apocynaceae) from Eastern/Southern Africa and Arabia, first described as a genus in 1810.
+==============================================================================================================
+CASE hard_bridge_028_kaiser_ventures_corporation_was_founded_by
+Q: Kaiser Ventures corporation was founded by an American industrialist who became known as the father of modern American shipbuilding?
+GOLD: Henry J. Kaiser
+prior: B=✔✔✔✔  C=✔✗✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Kaiser Ventures corporation', 'father of modern American shipbuilding', 'Henry J. Kaiser', 'Kaiser Ventures']
+ANSWER: The founder in question is **Henry J. Kaiser** (1882–1967), the American industrialist behind the Kaiser business empire. Kaiser Ventures, Inc. traces its lineage to Kaiser Steel Corporation, which he founded in 1941; Kaiser Ventures later became successor to Kaiser Steel's remaining assets (such as the Eagle Mountain Railroad).
+
+Kaiser earned his reputation as the "father of modern American shipbuilding" through his Kaiser Shipyards, which mass-produced Liberty ships during World War II using innovative, highly efficient assembly-line methods that dramatically sped up shipbuilding. He went on to found other major enterprises including Kaiser Aluminum, Kaiser Steel, Kaiser-Frazer/Kaiser Motors, and the Kaiser Permanente healthcare system.
+==============================================================================================================
+CASE hard_bridge_029_what_is_the_name_for_the
+Q: What is the name for the adventure in "Tunnels and Trolls", a game designed by Ken St. Andre?
+GOLD: Arena of Khazan
+prior: B=✗✔✗✔  C=✗✔✗✔
+auto: gold_in_answer=False  gold_in_extracts=False
+QUERIES: ['Tunnels and Trolls', 'Tunnels and Trolls solitaire adventure gamebook', 'Tunnels & Trolls "solo adventure" OR "GM-less" delve', 'Tunnels & Trolls game master adventure module rules']
+ANSWER: According to Wikipedia, **Tunnels & Trolls**, created by Ken St. Andre, is a fantasy role-playing game explicitly designed to support "solitaire, group, and play‑by‑mail gameplay." The single‑player format of the game is known as a **solo (solitaire) adventure** — a gamebook‑style adventure in which a player works through numbered paragraphs on their own rather than with a game master and group. An early and famous example of this format is *Buffalo Castle* (1976), a Tunnels & Trolls gamebook made up of 150 numbered paragraphs that the player follows solo.
+==============================================================================================================
+CASE hard_bridge_030_when_was_poison_s_album_shut
+Q: When was Poison's album "Shut Up, Make Love" released?
+GOLD: 2000
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Shut Up, Make Love Poison album']
+ANSWER: "Shut Up, Make Love" is actually a single (released in 2000) rather than a standalone album—it was the lead single from Poison's 2000 album *Crack a Smile... and More!*, which was released on March 14, 2000.
+==============================================================================================================
+CASE hard_comparison_031_hayden_is_a_singer_songwriter_from
+Q: Hayden is a singer-songwriter from Canada, but where does Buck-Tick hail from?
+GOLD: Fujioka, Gunma
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Buck-Tick band']
+ANSWER: Buck-Tick is a Japanese rock band, formed in Fujioka, Gunma, Japan, in 1983.
+==============================================================================================================
+CASE hard_bridge_032_which_french_ace_pilot_and_adventurer
+Q: Which  French ace pilot and adventurer fly L'Oiseau Blanc
+GOLD: Charles Eugène
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=False  gold_in_extracts=False
+QUERIES: ["L'Oiseau Blanc"]
+ANSWER: **Charles Nungesser**, France's third-highest-scoring flying ace of World War I (43 confirmed victories), flew L'Oiseau Blanc ("The White Bird"), accompanied by navigator **François Coli**. The two took off from Paris on 8 May 1927 attempting the first non-stop transatlantic flight to New York in pursuit of the Orteig Prize, but disappeared after being last sighted over Ireland — their fate remains one of aviation's enduring mysteries.
+==============================================================================================================
+CASE hard_comparison_033_are_freakonomics_and_in_the_realm
+Q: Are Freakonomics and In the Realm of the Hackers both American documentaries?
+GOLD: no
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Freakonomics (film)', 'In the Realm of the Hackers']
+ANSWER: No — only *Freakonomics: The Movie* (2010) is an American documentary. *In the Realm of the Hackers* (2003) is an **Australian** documentary, focused on the Melbourne-based hacker group "The Realm."
+==============================================================================================================
+CASE hard_comparison_034_which_band_letters_to_cleo_or
+Q: Which band, Letters to Cleo or Screaming Trees, had more members?
+GOLD: Letters to Cleo
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Letters to Cleo', 'Screaming Trees']
+ANSWER: Letters to Cleo had more members. Wikipedia lists their lineup as six people—Kay Hanley, Greg McKenna, Michael Eisenstein, Stacy Jones, Scott Riebling, and later Tom Polce and Joe Klompus (actually seven names total across the band's history)—whereas Screaming Trees was a four-piece: Mark Lanegan, Gary Lee Conner, Van Conner, and drummer Mark Pickerel (later replaced by Barrett Martin, keeping the lineup at four).
+==============================================================================================================
+CASE hard_bridge_035_alexander_kerensky_was_defeated_and_destroyed
+Q: Alexander Kerensky was defeated and destroyed by the Bolsheviks in the course of a civil war that ended when ?
+GOLD: October 1922
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Alexander Kerensky', 'Russian Civil War']
+ANSWER: Kerensky's Provisional Government was overthrown by the Bolsheviks in the October Revolution of 1917, which triggered the Russian Civil War between the Bolshevik Red Army and the anti-Bolshevik White movement. That war is generally dated as lasting until the capture of Vladivostok in October 1922, when the last major White resistance collapsed (though scattered anti-Bolshevik uprisings, such as the Basmachi movement in Central Asia, continued for some years afterward).
+==============================================================================================================
+CASE hard_bridge_036_seven_brief_lessons_on_physics_was
+Q: Seven Brief Lessons on Physics was written by an Italian physicist that has worked in France since what year?
+GOLD: 2000
+prior: B=✗✔✗✔  C=✗✔✗✔
+auto: gold_in_answer=False  gold_in_extracts=False
+QUERIES: ['Carlo Rovelli', 'Carlo Rovelli career Marseille since']
+ANSWER: The available Wikipedia extracts confirm that Carlo Rovelli, the Italian theoretical physicist who wrote *Seven Brief Lessons on Physics*, has worked in France (at the Centre de Physique Théorique in Marseille), but they don't specify the exact year he began working there. Based on what I found, I can't give a precise year without further sourcing beyond these extracts.
+==============================================================================================================
+CASE hard_bridge_037_the_livesey_hal_war_memorial_commemorates
+Q: The Livesey Hal War Memorial commemorates the fallen of which war, that had over 60 million casualties?
+GOLD: World War II
+prior: B=✗✗✔✔  C=✔✗✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Livesey Hall War Memorial']
+ANSWER: The memorial commemorates the fallen of both World War I and World War II, but it's World War II that had over 60 million casualties — making it the deadliest conflict in human history, with estimates of total deaths often cited well above 60 million.
+==============================================================================================================
+CASE hard_comparison_038_are_both_elko_regional_airport_and
+Q: Are both Elko Regional Airport and Gerald R. Ford International Airport located in Michigan?
+GOLD: no
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Elko Regional Airport', 'Gerald R. Ford International Airport']
+ANSWER: No — only Gerald R. Ford International Airport is in Michigan (near Grand Rapids). Elko Regional Airport is located in Elko, Nevada, not Michigan.
+==============================================================================================================
+CASE hard_bridge_039_ralph_hefferline_was_a_psychology_professor
+Q: Ralph Hefferline was a psychology professor at a university that is located in what city?
+GOLD: New York City
+prior: B=✔✗✔✔  C=✔✗✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Ralph Hefferline', 'Columbia University']
+ANSWER: Ralph Hefferline was a psychology professor at Columbia University, which is located in New York City.
+==============================================================================================================
+CASE hard_comparison_040_which_dog_s_ancestors_include_gordon
+Q: Which dog's ancestors include Gordon and Irish Setters: the Manchester Terrier or the Scotch Collie?
+GOLD: Scotch Collie
+prior: B=✗✔✗✔  C=✔✗✔✔
+ERROR: UsageLimitExceeded: The next tool call(s) would exceed the tool_calls_limit of 8 (tool_calls=9). Consider raising the li
+==============================================================================================================
+CASE hard_bridge_041_where_is_the_company_that_sachin
+Q: Where is the company that Sachin Warrier worked for as a software engineer headquartered? 
+GOLD: Mumbai
+prior: B=✔✔✔✔  C=✔✗✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Sachin Warrier', 'Tata Consultancy Services headquarters']
+ANSWER: Sachin Warrier worked as a software engineer at Tata Consultancy Services (TCS), which is headquartered in Mumbai, India.
+==============================================================================================================
+CASE hard_bridge_042_a_japanese_manga_series_based_on
+Q: A Japanese manga series based on a 16 year old high school student Ichitaka Seto, is written and illustrated by someone born in what year?
+GOLD: 1962
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Ichitaka Seto', 'Masakazu Katsura']
+ANSWER: The manga is **I"s**, featuring 16-year-old high school student Ichitaka Seto. It was written and illustrated by **Masakazu Katsura**, who was born on **December 10, 1962**.
+==============================================================================================================
+CASE hard_bridge_043_the_battle_in_which_giuseppe_arimondi
+Q: The battle in which Giuseppe Arimondi lost his life secured what for Ethiopia?
+GOLD: sovereignty
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Giuseppe Arimondi', 'Battle of Adwa']
+ANSWER: Giuseppe Arimondi was killed at the Battle of Adwa (1 March 1896), where the Ethiopian army under Emperor Menelik II decisively defeated the Italian colonial force. This victory forced Italy to recognize Ethiopia's sovereignty in the subsequent Treaty of Addis Ababa, securing Ethiopia's independence and de jure sovereignty—making it one of the few African nations to successfully resist European colonization during the Scramble for Africa, a status it retained until the Second Italo-Ethiopian War forty years later.
+==============================================================================================================
+CASE hard_bridge_044_alfred_balk_served_as_the_secretary
+Q: Alfred Balk served as the secretary of the Committee on the Employment of Minority Groups in the News Media under which United States Vice President?
+GOLD: Nelson Rockefeller
+prior: B=✔✗✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Alfred Balk']
+ANSWER: Alfred Balk served as secretary of the committee under Nelson Rockefeller — who later became U.S. Vice President (serving under President Gerald Ford), though the committee itself was established during Rockefeller's earlier tenure as Governor of New York.
+==============================================================================================================
+CASE hard_bridge_045_a_medieval_fortress_in_dirleton_east
+Q: A medieval fortress in Dirleton, East Lothian, Scotland borders on the south side of what coastal area?
+GOLD: Yellowcraig
+prior: B=✗✔✔✔  C=✗✗✔✔
+auto: gold_in_answer=False  gold_in_extracts=True
+QUERIES: ['Dirleton Castle']
+ANSWER: The Dirleton Castle fortress borders the south side of the **Firth of Forth**, the coastal inlet on Scotland's east coast near Edinburgh.
+==============================================================================================================
+CASE hard_bridge_046_who_is_the_writer_of_this
+Q: Who is the writer of this song that was inspired by words on a tombstone and was the first track on the box set Back to Mono?
+GOLD: Phil Spector
+prior: B=✔✗✔✔  C=✔✗✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['Back to Mono box set Phil Spector', 'To Know Him Is to Love Him song Phil Spector tombstone', '"To Know Him Is to Love Him" 1958 song written father\'s grave', 'To Know Him Is to Love Him Teddy Bears']
+ANSWER: The song is **"To Know Him Is to Love Him,"** written by **Phil Spector**. He was inspired by the epitaph on his father's gravestone, which read "To Know Him Was to Love Him." First recorded by Spector's group the Teddy Bears in 1958, it became a No. 1 hit and served as the opening track on Spector's 1991 box set *Back to Mono (1958–1969)*.
+==============================================================================================================
+CASE hard_bridge_047_what_type_of_forum_did_a
+Q: What type of forum did a former Soviet statesman initiate?
+GOLD: Organizations could come together to address global issues
+prior: B=✗✔✗✔  C=✗✔✗✔
+auto: gold_in_answer=False  gold_in_extracts=False
+QUERIES: ['Mikhail Gorbachev forum founder', 'World Political Forum Gorbachev', 'World Political Forum', 'Istanbul World Political Forum Gorbachev founder']
+ANSWER: Based on the search, Mikhail Gorbachev — the former Soviet statesman and last leader of the USSR — initiated the **World Political Forum** (also known as the Istanbul Forum), a non-profit foundation based in Turkey known for its annual meeting in Istanbul, bringing together statesmen, CEOs, opinion leaders, bureaucrats, and business elites, as well as figures from prominent universities.
+==============================================================================================================
+CASE hard_comparison_048_are_ferocactus_and_silene_both_types
+Q: Are Ferocactus and Silene both types of plant?
+GOLD: yes
+prior: B=✔✔✔✔  C=✔✔✔✔
+auto: gold_in_answer=True  gold_in_extracts=False
+QUERIES: ['Ferocactus', 'Silene']
+ANSWER: Yes — both are genera of flowering plants. Ferocactus is a genus of large, barrel-shaped cacti native to the southwestern U.S. and northwestern Mexico, while Silene is a genus in the carnation family (Caryophyllaceae), commonly known as campions or catchflies, found mainly across the Northern Hemisphere.
+==============================================================================================================
+CASE hard_bridge_049_which_british_first_generation_jet_powered
+Q: Which British first-generation jet-powered medium bomber was used in the South West Pacific theatre of World War II?
+GOLD: English Electric Canberra
+prior: B=✔✔✔✔  C=✗✗✔✔
+auto: gold_in_answer=True  gold_in_extracts=True
+QUERIES: ['British jet-powered medium bomber first generation', 'English Electric Canberra history']
+ANSWER: This appears to be a flawed premise. The aircraft matching the description "British first-generation, jet-powered medium bomber" is the **English Electric Canberra**, but it could not have served in the South West Pacific theatre of World War II — it wasn't even developed until the mid-to-late 1940s in response to a 1944 Air Ministry requirement, and it didn't enter service until May 1951, six years after WWII ended. No British jet bomber saw combat use during WWII; the Canberra later saw action in conflicts such as the Suez Crisis, the Vietnam War, the Falklands War, and various African conflicts, but not in WWII's South West Pacific theatre.

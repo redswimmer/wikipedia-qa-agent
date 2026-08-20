@@ -1,0 +1,807 @@
+[
+ {
+  "name": "hard_comparison_000_were_scott_derrickson_and_ed_wood",
+  "queries": [
+   "Scott Derrickson",
+   "Ed Wood"
+  ],
+  "gold_titles": [
+   "Ed Wood",
+   "Scott Derrickson"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_001_what_government_position_was_held_by",
+  "queries": [
+   "Kiss and Tell (1945 film) Corliss Archer",
+   "Shirley Temple government position ambassador"
+  ],
+  "gold_titles": [
+   "Kiss and Tell (1945 film)",
+   "Shirley Temple"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_002_what_science_fantasy_young_adult_series",
+  "queries": [
+   "science fantasy young adult series companion books enslaved worlds alien species"
+  ],
+  "gold_titles": [
+   "Animorphs",
+   "The Hork-Bajir Chronicles"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "the hork-bajir chronicles"
+  ]
+ },
+ {
+  "name": "hard_comparison_003_are_the_laleli_mosque_and_esma",
+  "queries": [
+   "Laleli Mosque",
+   "Esma Sultan Mansion"
+  ],
+  "gold_titles": [
+   "Esma Sultan Mansion",
+   "Laleli Mosque"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_004_the_director_of_the_romantic_comedy",
+  "queries": [
+   "Big Stone Gap (film)",
+   "Adriana Trigiani"
+  ],
+  "gold_titles": [
+   "Adriana Trigiani",
+   "Big Stone Gap (film)"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_005_2014_s_s_is_the_debut",
+  "queries": [
+   "2014 S/S album",
+   "2014 S/S Winner debut album"
+  ],
+  "gold_titles": [
+   "2014 S/S",
+   "Winner (band)"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_006_who_was_known_by_his_stage",
+  "queries": [],
+  "gold_titles": [
+   "Eenasul Fateh",
+   "Management consulting"
+  ],
+  "n_gold": 2,
+  "covered_top1": 0,
+  "covered_top3": 0,
+  "missed_top3": [
+   "eenasul fateh",
+   "management consulting"
+  ]
+ },
+ {
+  "name": "hard_bridge_007_the_arena_where_the_lewiston_maineiacs",
+  "queries": [
+   "Lewiston Maineiacs arena",
+   "Androscoggin Bank Colis\u00e9e seating capacity",
+   "Androscoggin Bank Colis\u00e9e Lewiston"
+  ],
+  "gold_titles": [
+   "Androscoggin Bank Colis\u00e9e",
+   "Lewiston Maineiacs"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "androscoggin bank colis\u00e9e"
+  ]
+ },
+ {
+  "name": "hard_bridge_008_who_is_older_annie_morton_or",
+  "queries": [
+   "Annie Morton",
+   "Terry Richardson",
+   "Annie Morton model"
+  ],
+  "gold_titles": [
+   "Annie Morton",
+   "Terry Richardson"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_comparison_009_are_local_h_and_for_against",
+  "queries": [
+   "Local H band",
+   "For Against band",
+   "For Against Lincoln Nebraska band"
+  ],
+  "gold_titles": [
+   "For Against",
+   "Local H"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_010_what_is_the_name_of_the",
+  "queries": [
+   "University of Kansas fight song"
+  ],
+  "gold_titles": [
+   "Kansas Song",
+   "University of Kansas"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "university of kansas"
+  ]
+ },
+ {
+  "name": "hard_bridge_011_what_screenwriter_with_credits_for_evolution",
+  "queries": [
+   "Evolution (2001 film)",
+   "The Family Man (2000 film)"
+  ],
+  "gold_titles": [
+   "David Weissman",
+   "The Family Man"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "david weissman"
+  ]
+ },
+ {
+  "name": "hard_bridge_012_what_year_did_guns_n_roses",
+  "queries": [
+   "Guns N\\' Roses \"Oh My God\" End of Days",
+   "End of Days (film) Arnold Schwarzenegger former police detective"
+  ],
+  "gold_titles": [
+   "End of Days (film)",
+   "Oh My God (Guns N' Roses song)"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_comparison_013_are_random_house_tower_and_888",
+  "queries": [
+   "Random House Tower",
+   "888 7th Avenue"
+  ],
+  "gold_titles": [
+   "888 7th Avenue",
+   "Random House Tower"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "888 7th avenue"
+  ]
+ },
+ {
+  "name": "hard_bridge_014_the_football_manager_who_recruited_david",
+  "queries": [
+   "Alex Ferguson Manchester United manager",
+   "Sir Alex Ferguson"
+  ],
+  "gold_titles": [
+   "1995\u201396 Manchester United F.C. season",
+   "Alex Ferguson"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "1995\u201396 manchester united f.c. season"
+  ]
+ },
+ {
+  "name": "hard_bridge_015_brown_state_fishing_lake_is_in",
+  "queries": [
+   "Brown State Fishing Lake",
+   "United States population"
+  ],
+  "gold_titles": [
+   "Brown County, Kansas",
+   "Brown State Fishing Lake"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "brown county, kansas"
+  ]
+ },
+ {
+  "name": "hard_bridge_016_the_vermont_catamounts_men_s_soccer",
+  "queries": [
+   "Vermont Catamounts men's soccer",
+   "America East Conference history name 1988 1996",
+   "North Atlantic Conference (NCAA)"
+  ],
+  "gold_titles": [
+   "America East Conference",
+   "Vermont Catamounts men's soccer"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_comparison_017_are_giuseppe_verdi_and_ambroise_thomas",
+  "queries": [
+   "Giuseppe Verdi",
+   "Ambroise Thomas"
+  ],
+  "gold_titles": [
+   "Ambroise Thomas",
+   "Giuseppe Verdi"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_018_roger_o_egeberg_was_assistant_secretary",
+  "queries": [
+   "Roger O. Egeberg"
+  ],
+  "gold_titles": [
+   "Richard Nixon",
+   "Roger O. Egeberg"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "richard nixon"
+  ]
+ },
+ {
+  "name": "hard_comparison_019_which_writer_was_from_england_henry",
+  "queries": [
+   "Henry Roth writer",
+   "Robert Erskine Childers"
+  ],
+  "gold_titles": [
+   "Henry Roth",
+   "Robert Erskine Childers"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "robert erskine childers"
+  ]
+ },
+ {
+  "name": "hard_bridge_020_which_other_mexican_formula_one_race",
+  "queries": [
+   "Sergio P\u00e9rez Formula One",
+   "Mexican Formula One drivers podium",
+   "Pedro Rodr\u00edguez Formula One driver"
+  ],
+  "gold_titles": [
+   "Formula One drivers from Mexico",
+   "Sergio P\u00e9rez"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_021_this_singer_of_a_rather_blustery",
+  "queries": [
+   "A Rather Blustery Day song singer",
+   "Jim Cummings hedgehog voice role",
+   "Sterling Holloway hedgehog voice role"
+  ],
+  "gold_titles": [
+   "A Rather Blustery Day",
+   "Jim Cummings"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "a rather blustery day"
+  ]
+ },
+ {
+  "name": "hard_bridge_022_aside_from_the_apple_remote_what",
+  "queries": [
+   "Apple Remote",
+   "Front Row (software)"
+  ],
+  "gold_titles": [
+   "Apple Remote",
+   "Front Row (software)"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_comparison_023_which_performance_act_has_a_higher",
+  "queries": [
+   "Badly Drawn Boy",
+   "Wolf Alice band"
+  ],
+  "gold_titles": [
+   "Badly Drawn Boy",
+   "Wolf Alice"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_024_what_was_the_father_of_kasper",
+  "queries": [
+   "Peter Schmeichel"
+  ],
+  "gold_titles": [
+   "Kasper Schmeichel",
+   "Peter Schmeichel"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_025_who_was_the_writer_of_these",
+  "queries": [
+   "These Boots Are Made for Walkin'",
+   "Lee Hazlewood"
+  ],
+  "gold_titles": [
+   "Lee Hazlewood",
+   "These Boots Are Made for Walkin'"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_026_the_2011_12_vcu_rams_men",
+  "queries": [
+   "Virginia Commonwealth University"
+  ],
+  "gold_titles": [
+   "2011\u201312 VCU Rams men's basketball team",
+   "Virginia Commonwealth University"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "2011\u201312 vcu rams men's basketball team"
+  ]
+ },
+ {
+  "name": "hard_comparison_027_are_both_dictyosperma_and_huernia_described",
+  "queries": [
+   "Dictyosperma",
+   "Huernia"
+  ],
+  "gold_titles": [
+   "Dictyosperma",
+   "Huernia"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_028_kaiser_ventures_corporation_was_founded_by",
+  "queries": [
+   "Kaiser Ventures",
+   "Henry J. Kaiser"
+  ],
+  "gold_titles": [
+   "Henry J. Kaiser",
+   "Kaiser Ventures"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "kaiser ventures"
+  ]
+ },
+ {
+  "name": "hard_bridge_029_what_is_the_name_for_the",
+  "queries": [
+   "Tunnels & Trolls",
+   "Tunnels & Trolls solo adventure module"
+  ],
+  "gold_titles": [
+   "Arena of Khazan",
+   "Tunnels &amp; Trolls"
+  ],
+  "n_gold": 2,
+  "covered_top1": 0,
+  "covered_top3": 0,
+  "missed_top3": [
+   "arena of khazan",
+   "tunnels &amp; trolls"
+  ]
+ },
+ {
+  "name": "hard_bridge_030_when_was_poison_s_album_shut",
+  "queries": [
+   "Poison Shut Up, Make Love album"
+  ],
+  "gold_titles": [
+   "Poison (American band)",
+   "Shut Up, Make Love"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "poison (american band)"
+  ]
+ },
+ {
+  "name": "hard_comparison_031_hayden_is_a_singer_songwriter_from",
+  "queries": [
+   "Buck-Tick band"
+  ],
+  "gold_titles": [
+   "Buck-Tick",
+   "Hayden (musician)"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "hayden (musician)"
+  ]
+ },
+ {
+  "name": "hard_bridge_032_which_french_ace_pilot_and_adventurer",
+  "queries": [
+   "L'Oiseau Blanc"
+  ],
+  "gold_titles": [
+   "Charles Nungesser",
+   "L'Oiseau Blanc"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "charles nungesser"
+  ]
+ },
+ {
+  "name": "hard_comparison_033_are_freakonomics_and_in_the_realm",
+  "queries": [
+   "Freakonomics (film)",
+   "In the Realm of the Hackers"
+  ],
+  "gold_titles": [
+   "Freakonomics (film)",
+   "In the Realm of the Hackers"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_comparison_034_which_band_letters_to_cleo_or",
+  "queries": [
+   "Letters to Cleo",
+   "Screaming Trees"
+  ],
+  "gold_titles": [
+   "Letters to Cleo",
+   "Screaming Trees"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_035_alexander_kerensky_was_defeated_and_destroyed",
+  "queries": [
+   "Russian Civil War end date",
+   "Alexander Kerensky"
+  ],
+  "gold_titles": [
+   "Russian Civil War",
+   "Socialist Revolutionary Party"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "socialist revolutionary party"
+  ]
+ },
+ {
+  "name": "hard_bridge_036_seven_brief_lessons_on_physics_was",
+  "queries": [
+   "Carlo Rovelli",
+   "Carlo Rovelli career France Aix-Marseille"
+  ],
+  "gold_titles": [
+   "Carlo Rovelli",
+   "Seven Brief Lessons on Physics"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "seven brief lessons on physics"
+  ]
+ },
+ {
+  "name": "hard_bridge_037_the_livesey_hal_war_memorial_commemorates",
+  "queries": [
+   "Livesey Hall War Memorial"
+  ],
+  "gold_titles": [
+   "Livesey Hall War Memorial",
+   "World War II casualties"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "world war ii casualties"
+  ]
+ },
+ {
+  "name": "hard_comparison_038_are_both_elko_regional_airport_and",
+  "queries": [
+   "Elko Regional Airport",
+   "Gerald R. Ford International Airport"
+  ],
+  "gold_titles": [
+   "Elko Regional Airport",
+   "Gerald R. Ford International Airport"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_039_ralph_hefferline_was_a_psychology_professor",
+  "queries": [
+   "Ralph Hefferline"
+  ],
+  "gold_titles": [
+   "Columbia University",
+   "Ralph Hefferline"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "columbia university"
+  ]
+ },
+ {
+  "name": "hard_comparison_040_which_dog_s_ancestors_include_gordon",
+  "queries": [
+   "Scotch Collie breed history ancestors",
+   "Manchester Terrier breed history ancestors",
+   "Manchester Terrier"
+  ],
+  "gold_titles": [
+   "Manchester Terrier",
+   "Scotch Collie"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "scotch collie"
+  ]
+ },
+ {
+  "name": "hard_bridge_041_where_is_the_company_that_sachin",
+  "queries": [
+   "Sachin Warrier"
+  ],
+  "gold_titles": [
+   "Sachin Warrier",
+   "Tata Consultancy Services"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "tata consultancy services"
+  ]
+ },
+ {
+  "name": "hard_bridge_042_a_japanese_manga_series_based_on",
+  "queries": [
+   "Ichitaka Seto manga",
+   "Ichitaka Seto",
+   "Sora no Otoshimono"
+  ],
+  "gold_titles": [
+   "I&quot;s",
+   "Masakazu Katsura"
+  ],
+  "n_gold": 2,
+  "covered_top1": 0,
+  "covered_top3": 0,
+  "missed_top3": [
+   "i&quot;s",
+   "masakazu katsura"
+  ]
+ },
+ {
+  "name": "hard_bridge_043_the_battle_in_which_giuseppe_arimondi",
+  "queries": [
+   "Giuseppe Arimondi",
+   "Battle of Adwa"
+  ],
+  "gold_titles": [
+   "Battle of Adwa",
+   "Giuseppe Arimondi"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_044_alfred_balk_served_as_the_secretary",
+  "queries": [
+   "Alfred Balk"
+  ],
+  "gold_titles": [
+   "Alfred Balk",
+   "Nelson Rockefeller"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "nelson rockefeller"
+  ]
+ },
+ {
+  "name": "hard_bridge_045_a_medieval_fortress_in_dirleton_east",
+  "queries": [
+   "Dirleton Castle",
+   "Firth of Forth Dirleton"
+  ],
+  "gold_titles": [
+   "Dirleton Castle",
+   "Yellowcraigs"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "yellowcraigs"
+  ]
+ },
+ {
+  "name": "hard_bridge_046_who_is_the_writer_of_this",
+  "queries": [
+   "Back to Mono (1958\u20131969)",
+   "Back to Mono track listing first track \"To Know Him Is to Love Him\"",
+   "To Know Him Is to Love Him song"
+  ],
+  "gold_titles": [
+   "Back to Mono (1958\u20131969)",
+   "To Know Him Is to Love Him"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_047_what_type_of_forum_did_a",
+  "queries": [
+   "World Political Forum Gorbachev",
+   "World Political Forum",
+   "World Political Forum founded by Gorbachev think tank"
+  ],
+  "gold_titles": [
+   "Mikhail Gorbachev",
+   "World Summit of Nobel Peace Laureates"
+  ],
+  "n_gold": 2,
+  "covered_top1": 1,
+  "covered_top3": 1,
+  "missed_top3": [
+   "world summit of nobel peace laureates"
+  ]
+ },
+ {
+  "name": "hard_comparison_048_are_ferocactus_and_silene_both_types",
+  "queries": [
+   "Ferocactus",
+   "Silene"
+  ],
+  "gold_titles": [
+   "Ferocactus",
+   "Silene"
+  ],
+  "n_gold": 2,
+  "covered_top1": 2,
+  "covered_top3": 2,
+  "missed_top3": []
+ },
+ {
+  "name": "hard_bridge_049_which_british_first_generation_jet_powered",
+  "queries": [
+   "British first-generation jet bomber",
+   "jet aircraft in World War II Pacific theatre"
+  ],
+  "gold_titles": [
+   "English Electric Canberra",
+   "No. 2 Squadron RAAF"
+  ],
+  "n_gold": 2,
+  "covered_top1": 0,
+  "covered_top3": 0,
+  "missed_top3": [
+   "english electric canberra",
+   "no. 2 squadron raaf"
+  ]
+ }
+]

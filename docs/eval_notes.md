@@ -328,6 +328,70 @@ aggregate effect is within run-to-run noise.
   unsafe request triggering a search. Stochastic (0 calls in Run A), but
   it's the category where a single search is already a failure.
 
+### 2026-08-20: retrieval diagnosis and the multi-hop iteration
+
+The taxonomy said fix the biggest axis (`faithfulness`); this round asked
+*why* it fails before touching anything, using a $0 diagnosis: replay the
+agent's actual queries (parsed from the committed confirm-run transcripts)
+against live Wikipedia and HotpotQA's own gold supporting-article labels.
+Findings, all pre-spend:
+
+- **Missing second-hop queries dominate: 20/50 cases** had a gold
+  supporting article no query ever asked for — the agent searched entity
+  #1 and completed the chain from memory (searched "Ralph Hefferline",
+  never "Columbia University"; searched "Sachin Warrier", never "TCS").
+  These map almost one-to-one onto the committed faithfulness failures.
+- **Top-1-only retrieval discarded the right article in 5/50 cases** —
+  the search API returned it at rank #2-3 and the tool threw it away.
+  Full gold-article coverage: 23/50 at top-1 → 28/50 at top-3 → 30/50 at
+  top-5 (redirect-resolved, entity-decoded matching).
+- **Extract depth is a non-issue**: comparing intro extracts vs
+  3000-char extracts on retrieved gold pages produced 3 flips, all
+  favoring the intro. No change made there — a change the data said not
+  to make.
+- Two gold-label defects identified while judging: `015` asks about a
+  "country" but the gold answer (9,984) is the *county*'s population
+  (HotpotQA typo), and `013`'s gold "no" is itself dubious. No agent fix
+  moves these; they feed the dataset-audit item in Section 5.
+
+**Fixes shipped** (see the seventh iteration in Section 4): a
+decompose-and-search-every-entity prompt guideline with a worked example
+in an `<example>` section, and `search_wikipedia` returning intro
+extracts of the top 3 hits labeled by title.
+
+**Agent-only run, all 50 cases, manually judged**
+(`evaluations/results/answer_quality_2026-08-20_agent-only-transcripts.json`
+— full transcripts; no LLM judges, graded by hand against gold + extracts
+with mechanical claim-in-extract checks): 47/50 answered, mean 2.06
+searches/case (max 5). Second-hop searches visibly grounded the old
+padding cases (Nixon's dates, Columbia's city, TCS's HQ, Ferguson's
+tenure all retrieved this run). Hand-graded fails: faithfulness ~4-5,
+correctness ~6 (dominated by the gold-label defects and unfindable
+pages), 3 cases hit the then-hard 8-call cap and errored.
+
+**Judged run 1** (`answer_quality_2026-08-20_multihop-judged-run1.txt`,
+46/50 graded, 4 cap errors): `faithfulness` 10 ✗, `correctness` 7 ✗,
+`relevance` 1 ✗, `safety` 0, budget 0. Against the 08-19 band
+(faithfulness 10-15, correctness 9-10, relevance 4-5): relevance and
+correctness moved down; faithfulness count sat at the band's floor but
+its *composition* changed — the core-claims-from-memory class all passed
+(each with its second-hop search in the transcript), and what Opus flags
+now is finer-grained: question-premise echoes (2 — e.g. repeating the
+question's own "father of modern American shipbuilding" phrase),
+side-clause garnish (3), and stochastic recurrences on runs where the
+agent happened to make only one search (5). Note the manual audit and
+the judged run graded *different* agent runs — the agent is stochastic,
+so per-case comparisons across the two are illustrative, not paired.
+
+**Soft cap follow-up** (same day): errored cases generate no evaluator
+signal, so the cap moved into the tool — past `SOFT_SEARCH_CAP` (8),
+`search_wikipedia` returns an answer-now instruction instead of
+searching; the runner's `UsageLimits` (raised to 12, eval budget matched)
+remains as backstop. CLI probe of the Aladin case: 8 searches, then a
+clean, honest "couldn't find it" answer in ~30s — gradeable, auditable,
+no error row. Offline tests cover the graceful path, the no-network
+guarantee past the cap, and the backstop.
+
 ## 4. Key iterations made based on eval results
 
 One iteration so far, directly from the `refusal` eval's first run:
@@ -477,6 +541,25 @@ regression net for the confidence loophole this prompt region reverted
 once before — it held (12/12 twice), and its own baseline run had already
 justified its existence by catching `capital_of_france` at zero searches.
 
+**Seventh (agent fixes, diagnosis-first): multi-hop search + top-3
+retrieval + graceful cap.** The only iteration driven by a dedicated $0
+diagnosis rather than judge output alone (Section 3, 2026-08-20): replaying
+real agent queries against HotpotQA's gold supporting articles showed the
+faithfulness failures were mostly *missing second-hop searches* (20/50
+cases), with a secondary loss from the tool discarding right-answer
+articles at search rank 2-3 (5/50). Changes: (a) prompt — "break the
+question into every entity or fact the answer depends on, and search for
+each one," with a worked example in an `<example>` section (per iteration
+three's lesson, verified against `search_discipline` before any paid run:
+floor 12/12); (b) tool — top-3 titled extracts instead of top-1; (c) after
+judged run 1 showed 4 error rows generating zero evaluator signal, the
+hard cap became a soft one inside the tool (answer-now instruction at 8
+searches, hard backstop 12). Measured so far: relevance 4-5 → 1,
+correctness 9-10 → 7, faithfulness count at the old band's floor (10) but
+with the core answering-from-memory class eliminated (verified per-case in
+the transcripts); a confirming judged run is pending before any claim
+hardens.
+
 ## 5. How I'd extend this with more time
 
 - Validate the judges themselves against human-labeled examples before
@@ -485,11 +568,16 @@ justified its existence by catching `capital_of_france` at zero searches.
   suite (including `answer_quality`'s four) was hand-authored with
   synthetic few-shot examples, not calibrated against a labeled dataset.
 - ~~Give the "retry with a different query" guideline an explicit
-  ceiling.~~ Done in iteration five (Section 4): prompt ceiling plus a
-  hard `UsageLimits` cap. What remains: make the capped case decline
-  gracefully — it currently ends in a clean, fast error
-  (`UsageLimitExceeded` / `UnexpectedModelBehavior`) rather than an
-  answer saying what was and wasn't found.
+  ceiling.~~ Done in iteration five (hard cap), made graceful in
+  iteration seven (Section 4): past the soft cap the tool instructs the
+  model to answer from what it has, so capped cases are gradeable
+  answers, not error rows.
+- Decide the rubric boundary for question-premise echoes: judged run 1
+  (2026-08-20) failed `faithfulness` on answers that restate the
+  question's own wording (e.g. "father of modern American shipbuilding")
+  because no extract contains it. Whether repeating the asker's premise
+  counts as an ungrounded claim is a judgment call the faithfulness
+  rubric doesn't currently make explicit.
 - Work around the judge's content filter on hacking-flavored refusal
   cases (6/50 systematically ungraded across both 2026-08-19 runs; see
   Section 3) — a rubric preamble making the grading context explicit, or
