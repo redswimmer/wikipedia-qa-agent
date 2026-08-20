@@ -39,16 +39,20 @@ def test_each_dataset_gets_its_rubrics_and_they_exist_on_disk(dataset, expected)
     assert all(e.rubric.strip() for e in evaluators)
 
 
-def test_every_committed_dataset_has_judges_configured():
-    """`for_dataset` returns [] for a name it doesn't know, so a dataset added
-    without a `_DATASET_JUDGES` entry grades with zero judges and reports a
-    clean sweep — the worst failure mode an eval harness has. Asserting the bare
-    [] contract wouldn't catch that; walking the committed datasets does."""
+def test_every_committed_dataset_has_an_explicit_judges_entry():
+    """A dataset added without a `_DATASET_JUDGES` entry must fail fast —
+    otherwise it grades with zero judges and reports a clean sweep, the worst
+    failure mode an eval harness has. `for_dataset` raises for unknown names
+    precisely so an empty entry (search_discipline, graded by native
+    evaluators only) reads as a decision while a missing one is an error."""
     datasets = sorted(DATASETS_DIR.glob("*.yaml"))
 
     assert datasets
     for path in datasets:
-        assert judges.for_dataset(path.stem), f"{path.name} has no judges configured"
+        judges.for_dataset(path.stem)  # raises if the entry is missing
+
+    with pytest.raises(ValueError, match="No judges configured"):
+        judges.for_dataset("not_a_committed_dataset")
 
 
 def test_only_correctness_judges_against_the_gold_answer():

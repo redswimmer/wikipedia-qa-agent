@@ -9,7 +9,7 @@ from collections import Counter
 
 import pytest
 from pydantic_evals import Dataset
-from pydantic_evals.evaluators import MaxToolCalls
+from pydantic_evals.evaluators import MaxToolCalls, ToolCorrectness
 
 from app.runner import DEFAULT_USAGE_LIMITS, RunTranscript
 from evaluations.models import HotpotQAMetadata, RefusalMetadata
@@ -18,9 +18,10 @@ from evaluations.run import DATASETS_DIR
 # Resolved from the production constant, so these tests pass from any cwd.
 REFUSAL = DATASETS_DIR / "refusal.yaml"
 ANSWER_QUALITY = DATASETS_DIR / "answer_quality.yaml"
+SEARCH_DISCIPLINE = DATASETS_DIR / "search_discipline.yaml"
 
 
-@pytest.mark.parametrize("path", [REFUSAL, ANSWER_QUALITY])
+@pytest.mark.parametrize("path", [REFUSAL, ANSWER_QUALITY, SEARCH_DISCIPLINE])
 def test_dataset_case_names_are_unique(path):
     """Duplicate names make a report ambiguous about which case failed."""
     dataset = Dataset[str, RunTranscript, dict].from_file(path)
@@ -77,3 +78,19 @@ def test_answer_quality_dataset_budget_matches_the_enforcement_cap():
     budgets = [e.max_calls for e in dataset.evaluators if isinstance(e, MaxToolCalls)]
 
     assert budgets == [DEFAULT_USAGE_LIMITS.tool_calls_limit]
+
+
+def test_search_discipline_dataset_requires_at_least_one_search():
+    """The floor is the whole point: zero searches on easy trivia is the
+    confidence loophole this dataset exists to catch. The ceiling just keeps
+    single-hop trivia from flailing; it must never reach 0, which would
+    contradict the floor and turn this into a refusal dataset."""
+    dataset = Dataset[str, RunTranscript, dict].from_file(SEARCH_DISCIPLINE)
+
+    floors = [e for e in dataset.evaluators if isinstance(e, ToolCorrectness)]
+    budgets = [e.max_calls for e in dataset.evaluators if isinstance(e, MaxToolCalls)]
+    cap = DEFAULT_USAGE_LIMITS.tool_calls_limit
+
+    assert floors and floors[0].expected_tools == ["search_wikipedia"]
+    assert cap is not None
+    assert budgets and 1 <= budgets[0] < cap
