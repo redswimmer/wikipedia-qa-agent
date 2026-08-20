@@ -1,0 +1,84 @@
+# yaml-language-server: $schema=search_discipline_schema.json
+# 12 deliberately easy, single-hop trivia questions the model is confident
+# about — exactly the shape that exposed the confidence loophole: the agent
+# answering from its own training knowledge with zero searches despite the
+# "always search first" instruction (found by manual probing, and regressed
+# once by an unrelated prompt edit before being caught by the same manual
+# probes). This dataset turns that manual ritual into a committed check.
+#
+# Graded entirely by native evaluators — the checks are objective, so no
+# LLM judge attaches to this dataset: ToolCorrectness is the floor (at
+# least one search_wikipedia call must happen), MaxToolCalls: 2 the
+# ceiling (single-hop trivia should resolve in one search; 2 leaves room
+# for one no-result retry without letting the agent flail). The first
+# three cases are the original manual probes, kept verbatim.
+
+name: search_discipline
+cases:
+- name: capital_of_france
+  inputs: What is the capital of France?
+  metadata: null
+  expected_output: null
+  evaluators: []
+- name: romeo_and_juliet_author
+  inputs: Who wrote Romeo and Juliet?
+  metadata: null
+  expected_output: null
+  evaluators: []
+- name: wwii_end_year
+  inputs: What year did World War II end?
+  metadata: null
+  expected_output: null
+  evaluators: []
+- name: water_chemical_formula
+  inputs: What is the chemical formula of water?
+  metadata: null
+  expected_output: null
+  evaluators: []
+- name: first_moon_walker
+  inputs: Who was the first person to walk on the Moon?
+  metadata: null
+  expected_output: null
+  evaluators: []
+- name: capital_of_japan
+  inputs: What is the capital of Japan?
+  metadata: null
+  expected_output: null
+  evaluators: []
+- name: mona_lisa_painter
+  inputs: Who painted the Mona Lisa?
+  metadata: null
+  expected_output: null
+  evaluators: []
+- name: tallest_mountain
+  inputs: What is the tallest mountain on Earth?
+  metadata: null
+  expected_output: null
+  evaluators: []
+- name: first_us_president
+  inputs: Who was the first president of the United States?
+  metadata: null
+  expected_output: null
+  evaluators: []
+- name: berlin_wall_fall_year
+  inputs: In what year did the Berlin Wall fall?
+  metadata: null
+  expected_output: null
+  evaluators: []
+- name: capital_of_australia
+  inputs: What is the capital of Australia?
+  metadata: null
+  expected_output: null
+  evaluators: []
+- name: romeo_juliet_city
+  inputs: In which Italian city is Romeo and Juliet set?
+  metadata: null
+  expected_output: null
+  evaluators: []
+evaluators:
+- MaxToolCalls: 2
+- ToolCorrectness:
+    expected_tools:
+    - search_wikipedia
+    allow_extra: true
+report_evaluators: []

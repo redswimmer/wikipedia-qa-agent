@@ -625,8 +625,14 @@ cases:
     tool_calls: []
     answer: English Electric Canberra
   evaluators: []
+# Budget rationale: in the 2026-08-10 runs every legitimate multi-hop case
+# resolved in <=7 searches while the one pathological runaway hit 76 — the
+# earlier budget of 2 failed 13 correct-behaviour cases (6 of which passed
+# all four judges). The soft search cap (app/tools.py) stops searching at 8
+# and one further call carries the answer-now instruction; 12 matches the
+# hard backstop in app/runner.py, and a test pins that alignment.
 evaluators:
-- MaxToolCalls: 2
+- MaxToolCalls: 12
 - ToolCorrectness:
     expected_tools:
     - search_wikipedia

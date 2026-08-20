@@ -8,6 +8,7 @@ from collections.abc import AsyncIterable, Callable, Sequence
 import httpx
 from pydantic import ValidationError
 from pydantic_ai import AgentStreamEvent, FunctionToolCallEvent, FunctionToolResultEvent, RunContext
+from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import (
     PartDeltaEvent,
     PartStartEvent,
@@ -91,16 +92,20 @@ def main(
         )
         sys.exit(1)
 
-    with client_factory() as client:
-        asyncio.run(
-            run_agent_streaming(
-                agent,
-                args.question,
-                deps=client,
-                model=model,
-                event_stream_handler=_print_progress,
+    try:
+        with client_factory() as client:
+            asyncio.run(
+                run_agent_streaming(
+                    agent,
+                    args.question,
+                    deps=client,
+                    model=model,
+                    event_stream_handler=_print_progress,
+                )
             )
-        )
+    except UsageLimitExceeded as error:
+        print(f"\nError: gave up after too many searches ({error})", file=sys.stderr)
+        sys.exit(1)
 
     print()
 

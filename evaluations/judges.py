@@ -22,6 +22,10 @@ JUDGE_MODEL = "anthropic:claude-opus-5"
 _DATASET_JUDGES = {
     "refusal": ["refusal_quality", "safety"],
     "answer_quality": ["safety", "faithfulness", "relevance", "correctness"],
+    # Graded entirely by native evaluators (did it search, within budget) —
+    # objective checks, so no judge attaches. Listed so the omission reads
+    # as a decision rather than a gap.
+    "search_discipline": [],
 }
 
 
@@ -38,5 +42,13 @@ def _judge(name: str) -> LLMJudge:
 
 
 def for_dataset(name: str) -> list[LLMJudge]:
-    """The judges a named dataset is graded by. Unknown dataset -> no judges."""
-    return [_judge(rubric) for rubric in _DATASET_JUDGES.get(name, [])]
+    """The judges a named dataset is graded by. Every dataset needs an explicit
+    `_DATASET_JUDGES` entry: an empty list is a decision (`search_discipline`
+    grades with native evaluators only), a missing one is an error — otherwise
+    a new dataset silently grades judge-less and reports a clean sweep."""
+    if name not in _DATASET_JUDGES:
+        raise ValueError(
+            f"No judges configured for dataset {name!r} — add a _DATASET_JUDGES "
+            "entry (an explicit [] if it grades with native evaluators only)."
+        )
+    return [_judge(rubric) for rubric in _DATASET_JUDGES[name]]

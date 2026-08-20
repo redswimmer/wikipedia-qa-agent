@@ -10,6 +10,15 @@ from pydantic import BaseModel
 from pydantic_ai import Agent, AgentRunResult, AgentStreamEvent, RunContext
 from pydantic_ai.messages import RetryPromptPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.models import KnownModelName, Model
+from pydantic_ai.usage import UsageLimits
+
+# Hard backstop on tool calls per run. The *soft* stop lives in the tool
+# itself (app.tools.SOFT_SEARCH_CAP = 8): past it, search_wikipedia returns an
+# answer-now instruction instead of searching, so hard questions still produce
+# a gradeable answer. This limit only trips for a model that ignores that
+# instruction and keeps calling anyway — it turns the 59-76-call spirals the
+# 2026-08 runs recorded ($1.01-$1.52, up to 15 minutes) into a fast error.
+DEFAULT_USAGE_LIMITS = UsageLimits(tool_calls_limit=12)
 
 
 class ToolCallRecord(BaseModel):
@@ -29,10 +38,12 @@ def run_agent(
     question: str,
     deps: httpx.Client,
     model: Model | KnownModelName,
+    usage_limits: UsageLimits = DEFAULT_USAGE_LIMITS,
 ) -> RunTranscript:
     """Raises whatever the underlying agent run raises (e.g. `UnexpectedModelBehavior`
-    when tool retries are exhausted) — callers decide how to handle failure."""
-    result = agent.run_sync(question, deps=deps, model=model)
+    when tool retries are exhausted, `UsageLimitExceeded` past `usage_limits`) —
+    callers decide how to handle failure."""
+    result = agent.run_sync(question, deps=deps, model=model, usage_limits=usage_limits)
     return _build_transcript(question, result)
 
 
@@ -42,12 +53,17 @@ async def run_agent_streaming(
     deps: httpx.Client,
     model: Model | KnownModelName,
     event_stream_handler: Callable[[RunContext, AsyncIterable[AgentStreamEvent]], Awaitable[None]],
+    usage_limits: UsageLimits = DEFAULT_USAGE_LIMITS,
 ) -> RunTranscript:
     """Same as `run_agent()`, but drives the run through `agent.run()` so
     `event_stream_handler` receives tool-call/result events as they happen.
     Raises whatever the underlying agent run raises, same as `run_agent()`."""
     result = await agent.run(
-        question, deps=deps, model=model, event_stream_handler=event_stream_handler
+        question,
+        deps=deps,
+        model=model,
+        event_stream_handler=event_stream_handler,
+        usage_limits=usage_limits,
     )
     return _build_transcript(question, result)
 

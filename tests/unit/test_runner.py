@@ -16,20 +16,23 @@ from pydantic_ai import (
     RunContext,
     UnexpectedModelBehavior,
 )
+from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import (
     ModelMessage,
     ModelResponse,
     RetryPromptPart,
     TextPart,
     ToolCallPart,
+    ToolReturnPart,
 )
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from app.agent import agent
-from app.runner import run_agent, run_agent_streaming
+from app.runner import DEFAULT_USAGE_LIMITS, run_agent, run_agent_streaming
 from tests.unit.fakes import (
     EXTRACT,
     TITLE,
+    TOOL_RESULT,
     MediaWiki,
     search_then_answer,
     streaming_model,
@@ -67,7 +70,7 @@ def test_run_agent_records_tool_call_and_answer(wikipedia_mock_transport):
     assert len(transcript.tool_calls) == 1
     assert transcript.tool_calls[0].tool_name == "search_wikipedia"
     assert transcript.tool_calls[0].args == {"query": TITLE}
-    assert transcript.tool_calls[0].result == EXTRACT
+    assert transcript.tool_calls[0].result == TOOL_RESULT
     assert transcript.answer == EXTRACT
 
 
@@ -80,6 +83,57 @@ def test_run_agent_with_no_tool_call_has_empty_tool_calls(wikipedia_mock_transpo
 
     assert transcript.tool_calls == []
     assert transcript.answer == "4"
+
+
+def _search_forever(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    """Reformulates a fresh query on every turn, never answering — the runaway
+    shape the 2026-08-10 eval runs caught live (59-76 searches on one case)."""
+    return _search(f"reworded query {len(messages)}")
+
+
+def test_run_agent_soft_cap_yields_an_answer_from_a_compliant_model(wikipedia_mock_transport):
+    """The graceful path: a model that stops when the tool says to answers from
+    what it has, so the case is gradeable instead of an error row."""
+
+    def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        last = messages[-1].parts[-1]
+        if isinstance(last, ToolReturnPart) and "Answer now" in str(last.content):
+            return ModelResponse(parts=[TextPart(content="Couldn't find it; here's what I have.")])
+        return _search(f"reworded {len(messages)}")
+
+    with httpx.Client(transport=wikipedia_mock_transport) as client:
+        transcript = run_agent(agent, "unfindable", deps=client, model=FunctionModel(model))
+
+    assert transcript.answer == "Couldn't find it; here's what I have."
+    assert "Answer now" in transcript.tool_calls[-1].result  # the stop is auditable too
+
+
+def test_run_agent_caps_runaway_searching(wikipedia_mock_transport):
+    """The hard backstop: a model that ignores the tool's answer-now instruction
+    and keeps calling anyway must still fail fast, not burn budget forever."""
+    with (
+        pytest.raises(UsageLimitExceeded),
+        httpx.Client(transport=wikipedia_mock_transport) as client,
+    ):
+        run_agent(agent, "runaway question", deps=client, model=FunctionModel(_search_forever))
+
+
+def test_run_agent_allows_searching_up_to_the_cap(wikipedia_mock_transport):
+    """The cap must not strangle legitimate multi-hop runs at its boundary."""
+    cap = DEFAULT_USAGE_LIMITS.tool_calls_limit
+    assert cap is not None
+
+    def model(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        searches = sum(1 for m in messages for part in m.parts if isinstance(part, ToolCallPart))
+        if searches < cap:
+            return _search(f"hop {searches}")
+        return ModelResponse(parts=[TextPart(content=EXTRACT)])
+
+    with httpx.Client(transport=wikipedia_mock_transport) as client:
+        transcript = run_agent(agent, "long multi-hop", deps=client, model=FunctionModel(model))
+
+    assert len(transcript.tool_calls) == cap
+    assert transcript.answer == EXTRACT
 
 
 def test_run_agent_propagates_exhausted_retries():
@@ -121,7 +175,7 @@ def test_run_agent_records_failed_retry_before_successful_call():
 
     assert [c.args["query"] for c in transcript.tool_calls] == ["nonexistent", TITLE]
     assert transcript.tool_calls[0].result.startswith("[retry]")
-    assert transcript.tool_calls[1].result == EXTRACT
+    assert transcript.tool_calls[1].result == TOOL_RESULT
 
 
 def test_run_agent_streaming_records_the_same_transcript_and_emits_events(wikipedia_mock_transport):
@@ -144,7 +198,7 @@ def test_run_agent_streaming_records_the_same_transcript_and_emits_events(wikipe
     transcript = asyncio.run(run())
 
     assert [c.tool_name for c in transcript.tool_calls] == ["search_wikipedia"]
-    assert transcript.tool_calls[0].result == EXTRACT
+    assert transcript.tool_calls[0].result == TOOL_RESULT
     assert transcript.answer == EXTRACT
     assert [e.part.tool_name for e in received if isinstance(e, FunctionToolCallEvent)] == [
         "search_wikipedia"
