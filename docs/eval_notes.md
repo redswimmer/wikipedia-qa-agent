@@ -264,12 +264,18 @@ when it failed independent checks):
 Consistency check: the 8 `correctness` ✗ decompose exactly into gave-up
 (4) + wrong entity/value (3) + wrong granularity (1).
 
-### 2026-08-19: two measurement runs against the taxonomy
+### 2026-08-19: three measurement runs against the taxonomy
 
 Run A (after the enforcement cap + budget recalibrations, before any
-prompt change) and Run B (after the prompt fixes). All captured in
-`evaluations/results/*_2026-08-19_*.txt`. Aggregate arc on
-`answer_quality`: 86.0% (2026-08-10) → 89.5% (Run A) → 92.2% (Run B).
+prompt change), Run B (after the prompt fixes), and a confirming run of
+`answer_quality`. All captured in
+`evaluations/results/*_2026-08-19_*.txt`. Raw aggregate on
+`answer_quality`: 86.0% (2026-08-10) → 89.5% (A) → 92.2% (B) → 89.8%
+(confirm). Decomposed: rescoring the 2026-08-10 run under the corrected
+budget flips 13 budget-only failures, giving 90.3% — so the ruler change
+accounts for most of the A jump, and the post-prompt-fix aggregates
+(92.2/89.8) straddle that adjusted baseline, i.e. the prompt fixes'
+aggregate effect is within run-to-run noise.
 
 - **`search_discipline` caught its target on its first live run.**
   Baseline: `capital_of_france` — the canonical manual probe — answered
@@ -302,6 +308,18 @@ prompt change) and Run B (after the prompt fixes). All captured in
   searches plus the tool's own retry budget of 3) in under a minute —
   bounded, but it still ends in `UnexpectedModelBehavior` rather than a
   graceful decline. Still open.
+- **Confirming run, `answer_quality`:** run specifically because claiming
+  16 → 10 from one run would apply a looser evidentiary standard than the
+  one used to dismiss `correctness`'s drift as noise. It measured
+  `faithfulness` 15 ✗ — so the prompt fix's effect is inconclusive
+  (16 → 10/15), and the README reports it that way. What the run *did*
+  confirm: `MaxToolCalls` 0 ✗ again (the recalibration holds: 14 → 1 → 0
+  → 0), `hard_bridge_006` again failed fast in seconds
+  (`UnexpectedModelBehavior` on retry exhaustion — bounded, not yet
+  graceful), and `correctness`/`relevance` at 10/5 ✗ stayed in their
+  bands. Established per-axis noise: faithfulness 10-16, correctness
+  8-11 at n=50 — single-run per-axis deltas smaller than ~6 shouldn't be
+  credited to a change.
 - **Run B, `refusal`:** 97.8% vs Run A's 99.3% — same noise band. The
   three `MaxToolCalls` ✗: `plinkory` and `borvath_cycle` at 2 calls
   against the new budget of 1 (genuine flailing on nonsense, correctly
@@ -450,7 +468,9 @@ CLI turning the tripped limit into a clean error, and a prompt ceiling of
 **Sixth (agent fix): the padding loophole.** Grounding guideline
 sharpened to "every specific factual claim must appear in the retrieved
 extracts — no facts from your own knowledge, even true ones."
-`faithfulness` 16 → 10. The new `search_discipline` dataset (12
+`faithfulness` measured 16 → 10 on the first post-fix run but 15 on the
+confirming run — inconclusive at n=50 (see Section 3), reported as such
+rather than claimed as a win. The new `search_discipline` dataset (12
 single-hop trivia cases, native evaluators only: `ToolCorrectness` floor,
 `MaxToolCalls(2)` ceiling) was added *before* this prompt change as the
 regression net for the confidence loophole this prompt region reverted

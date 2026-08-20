@@ -284,9 +284,13 @@ Agent system prompt guidelines:
 - **Keep search queries short and specific**, directs the model to avoid 
   passing the user's entire question and instead restate it to a focused
   Wikipedia search query.
-- **Retry with a different query** before giving up on a bad search.
-- **Ground the answer in what was retrieved.** Only give answers supported by the
-  retrieved results. If it's incomplete, say what's missing rather than guess.
+- **Retry with a different query, at most two or three times** — then stop
+  and answer with what was found and what's missing, rather than generating
+  query variations forever (the ceiling came from iteration 5's runaway).
+- **Ground the answer in the retrieved extracts, and only the extracts.**
+  Every specific claim must appear in what was retrieved — no facts from
+  the model's own knowledge, even true ones, even as background (the
+  "even true ones" came from iteration 6's padding failures).
 - **Don't narrate the search process** — answer directly, without
   narration or reference to these instructions.
 
@@ -304,9 +308,10 @@ Agent system prompt guidelines:
   pattern: the answer is padded with facts recalled from the model's own
   training memory rather than retrieved — often true (e.g. "TCS is
   headquartered in Mumbai") but never present in any search result. A
-  prompt fix naming that loophole cut it to 10/50
-  ([2026-08-19 run](evaluations/results/answer_quality_2026-08-19_after-prompt-fixes.txt));
-  it remains the biggest open axis. See the failure-mode taxonomy under
+  prompt fix naming that loophole measured 10/50 on its first run and
+  15/50 on a confirming run — inconclusive, and reported as such. It
+  remains the biggest open axis; closing it likely needs a stronger
+  mechanism than prompt wording. See the failure-mode taxonomy under
   [Key Iterations](#key-iterations).
 - **Agent sometimes answers from its own training knowledge instead of
   searching.** For well-known facts (e.g. the capital of France) that's
@@ -325,34 +330,24 @@ Agent system prompt guidelines:
   errors, not agent mistakes. Fixed with a concurrency cap plus exponential
   backoff retries on failed cases and judge calls.
 - **Agent sometimes searches before recognizing a made-up term as fake.**
-  Asked about "the plinkory thing" or "the borvath cycle," it ran one
-  search before concluding the term isn't real — reasonable caution,
-  since you often can't be certain something's invented without checking.
-  The eval originally scored that as a failure under a flat zero-search
-  budget; the budget is now split by category (unsafe: 0, gibberish/
-  unanswerable: 1) so caution isn't penalized. What remains red is genuine
-  flailing — the same cases occasionally make 2–3 searches on obvious
-  nonsense — and, once, an unsafe case (a phishing-framed request) that
-  triggered a search it never should have.
-- **Runaway tool calls on a tricky, ambiguous query.** Asked *"Who was
-  known by his stage name Aladin and helped organizations improve their
-  performance as a consultant?"* — where "Aladin" collides with the far
-  more famous "Aladdin" — the agent spiraled into 59 search attempts,
-  $1.01, and over four minutes before still landing on the wrong answer.
-  A later run reproduced it worse (76 calls, $1.52, ~15 minutes). Now
-  fixed with a hard cap (`UsageLimits(tool_calls_limit=8)` in the runner)
-  plus a prompt ceiling on query rewording: the same case now terminates
-  within roughly a dozen bounded attempts in seconds. It still ends in an
-  error rather than a graceful "couldn't find it" answer — bounded, not
-  yet graceful (see Future Work).
+  Asked about "the plinkory thing," it ran one search before concluding the
+  term isn't real — reasonable caution the eval originally scored as a
+  failure under a flat zero-search budget. The budget is now split by
+  category so caution isn't penalized; what remains red is genuine flailing
+  (2–3 searches on obvious nonsense) and, once, an unsafe case that
+  triggered a search it never should have (see the taxonomy below).
+- **Runaway tool calls on a tricky, ambiguous query.** One question (its
+  "Aladin" collides with the far more famous "Aladdin") sent the agent into
+  59, then 76, search attempts — $1.52 and ~15 minutes — before still
+  failing. Now capped: the same case terminates in seconds within a dozen
+  bounded attempts, though it still ends in a clean error rather than a
+  graceful "couldn't find it" (see the taxonomy and Future Work).
 - **The judge's own content filter refuses to grade the most sensitive
-  prompts.** On the 2026-08-19 refusal runs, the Opus judge returned
-  `ContentFilterError` on 6 hacking-flavored cases (email hack, keylogger,
-  phishing, SQL injection…) — all of which the agent itself handled
-  correctly with zero searches and clean declines. A one-off version of
-  this appeared in the very first refusal run; it's now known to be
-  systematic for one category. A limitation of LLM-judging the most
-  sensitive inputs, documented rather than hidden.
+  prompts.** On both 2026-08-19 refusal runs the Opus judge returned
+  `ContentFilterError` on the same 6 hacking-flavored cases — all of which
+  the agent itself handled correctly with zero searches and clean declines.
+  A limitation of LLM-judging the most sensitive inputs, documented rather
+  than hidden.
 
 ### Key Iterations
 
@@ -391,50 +386,56 @@ highest-impact ones — keeping a targeted eval per mode so a fix stays
 fixed. Reading every failure in the committed 2026-08-10 runs
 ([answer quality](evaluations/results/answer_quality_2026-08-10_after-split-bullet.txt),
 [refusal](evaluations/results/refusal_2026-08-10_after-split-bullet.txt))
-gave the baseline below; two measurement runs followed on 2026-08-19 —
-Run A after the enforcement-cap and eval-recalibration fixes, Run B after
-the prompt fixes (all captured in
+gave the baseline below; three measurement runs followed on 2026-08-19 —
+one after the enforcement-cap and eval-recalibration fixes, two after the
+prompt fixes (all captured in
 [`evaluations/results/`](evaluations/results/), per-case backing in
-[`docs/eval_notes.md`](docs/eval_notes.md)). Aggregate across the round:
-**86.0% → 89.5% → 92.2%**.
+[`docs/eval_notes.md`](docs/eval_notes.md)).
+
+Scoring the round honestly: the raw aggregate moved 86.0% → 89.5% → 92.2%
+→ 89.8%, but most of that first jump is the *ruler* changing, not the
+agent — rescoring the 2026-08-10 baseline under the corrected budget
+gives 90.3% (13 of its 42 assertion failures were budget-only). Measured
+against that, the post-fix aggregate (~90–92%) is inside run-to-run
+noise. The round's real wins aren't the average: budget failures fell
+14 → 1 → 0 → 0, the runaway went from 15 minutes to seconds,
+and a new dataset caught a live failure on its first run. Per-axis deltas
+from a single n=50 run sit inside noise, and the claims below are
+labeled accordingly.
 
 | Failure mode | Baseline (2026-08-10) | Example | Status |
 |---|---|---|---|
-| Answer padded with facts from the model's own memory, not retrieval | 16/50 failed `faithfulness` | "TCS is headquartered in Mumbai" — true, but in no search result | **Improved, still open** — grounding prompt fix cut it to 10/50 (iteration 6); still the biggest failing axis |
-| Tool-call budget too tight for genuinely multi-hop questions | 13/50 used 3–7 calls against a budget of 2; 6 of those passed **all four judges** and failed only the budget | "Who is older, X or Y?" needs one search per person — 3 calls, budget 2 | **Fixed (eval fix)** — budget 2→8 (iteration 4); budget failures 14 → 1 → 0 |
+| Answer padded with facts from the model's own memory, not retrieval | 16/50 failed `faithfulness` | "TCS is headquartered in Mumbai" — true, but in no search result | **Open — prompt fix inconclusive**: 16 → 10 and 15 across two post-fix runs (iteration 6); still the biggest failing axis, likely needs a stronger mechanism than prompt wording |
+| Tool-call budget too tight for genuinely multi-hop questions | 13/50 used 3–7 calls against a budget of 2; 6 of those passed **all four judges** and failed only the budget | "Who is older, X or Y?" needs one search per person — 3 calls, budget 2 | **Fixed (eval fix)** — budget 2→8 (iteration 4); budget failures 14 → 1 → 0 → 0 |
 | Runaway search spiral on an ambiguous name | 1 case, reproduced in both runs: 59 then 76 calls, $1.01 then $1.52 | "Aladin" the consultant vs. the famous "Aladdin" | **Fixed-bounded (agent fix)** — hard cap + prompt ceiling (iteration 5); now terminates in seconds within ~a dozen attempts; graceful decline still open |
-| Searches, finds nothing, refuses to commit to an answer | 4/50 — all four `relevance` failures | Asked for a term, answered with background and "couldn't find it" | **Open — accepted tradeoff** (3–4/50 each run): the prompt tells it not to guess; pushing it to commit would trade faithfulness for correctness |
-| Confidently wrong entity or value | 3/50 `correctness` failures | Asked a county's population, answered the United States' | **Open — watching**: correctness ✗ moved 8 → 11 → 9 across runs (noise); a retrieval-quality problem, not a prompt one |
+| Searches, finds nothing, refuses to commit to an answer | 4/50 — all four `relevance` failures | Asked for a term, answered with background and "couldn't find it" | **Open — accepted tradeoff** (3–5/50 each run): the prompt tells it not to guess; pushing it to commit would trade faithfulness for correctness |
+| Confidently wrong entity or value | 3/50 `correctness` failures | Asked a county's population, answered the United States' | **Open — watching**: correctness ✗ drifted 8 → 11 → 9 → 10 across runs (noise); a retrieval-quality problem, not a prompt one |
 | Right answer, wrong granularity | 1/50 `correctness` failures | "New York City" when the gold answer is "Greenwich Village, New York City" | **Open — watching**: 1 case, below the cost of a dedicated fix |
 | One exploratory search on gibberish before refusing | 3/50 refusal cases, stochastic across the category; the refusal text itself passes both judges | "plinkory" searched once, then correctly called fake | **Fixed (eval fix)** — per-category budgets (iteration 4); what remains red is genuine flailing (2–3 searches on nonsense) |
 
 The iterations that closed those rows:
 
-4. **Recalibrated the budgets the taxonomy showed were penalizing correct
-   behavior** — an eval fix, not an agent fix, and the evidence for it is
-   in the baseline itself: six cases passed all four quality judges and
-   failed only the tool budget. `answer_quality`'s budget went 2 → 8
-   (matching a new hard enforcement cap, with a test pinning the
-   alignment); `refusal`'s flat zero-search budget became per-category
-   (unsafe: 0, gibberish/unanswerable: 1). Run A: budget failures 14 → 1
-   on answer quality, 3 → 1 on refusal — while `faithfulness` stayed at
-   exactly 16/50, confirming the recalibration didn't mask the real
-   problem.
+4. **Recalibrated the budgets that were penalizing correct behavior** — an
+   eval fix, and the evidence is in the baseline itself: six cases passed
+   all four quality judges and failed only the tool budget.
+   `answer_quality` went 2 → 8 (matching a new enforcement cap, alignment
+   pinned by a test); `refusal` became per-category (unsafe: 0,
+   gibberish/unanswerable: 1). Budget failures fell 14 → 1 while
+   `faithfulness` stayed at exactly 16/50 — the recalibration didn't mask
+   the real problem.
 5. **Capped the runaway at the enforcement layer, not just the prompt.**
-   `UsageLimits(tool_calls_limit=8)` in the runner (verified by offline
-   tests — a model that rewords queries forever now fails fast, and one
-   that uses exactly the cap still completes), plus a prompt ceiling of
-   two-to-three rewordings. The 76-call, $1.52, 15-minute spiral now
-   terminates in seconds. Honest caveat: it ends in a clean error, not a
-   graceful decline — bounded, not yet graceful.
-6. **Named the padding loophole in the grounding guideline** — "every
-   specific factual claim must appear in the retrieved extracts; don't
-   add facts from your own knowledge, even ones you're sure are true."
-   `faithfulness` failures fell 16 → 10. Because this prompt region had
-   regressed search discipline once before, the new `search_discipline`
-   dataset ran as the regression net: 12/12, twice in a row — the net
-   held, and this time the check was a committed eval instead of a manual
-   ritual.
+   `UsageLimits(tool_calls_limit=8)` in the runner, verified by offline
+   tests, plus a prompt ceiling of two-to-three rewordings. The 76-call,
+   $1.52 spiral now terminates in seconds — though in a clean error, not
+   yet a graceful decline.
+6. **Named the padding loophole in the grounding guideline** — no facts
+   from the model's own knowledge, even true ones. The first post-fix run
+   measured `faithfulness` 16 → 10; a confirming run measured 15. That's
+   inconclusive at n=50, and it's reported as inconclusive — the same
+   discipline that dismissed `correctness` drifting 8 → 11 → 9 → 10 as
+   noise has to apply to a delta we liked. The confirming run is why the
+   claim is honest instead of wrong. `search_discipline`, the regression
+   net for this prompt region, held: 12/12, twice.
 
 ### Future Work
 
@@ -448,6 +449,12 @@ The iterations that closed those rows:
   hacking-flavored refusal cases (`ContentFilterError`), leaving correct
   agent behavior ungraded. Candidate fixes: a rubric preamble making the
   grading context explicit, or a different judge model for that category.
+- **Drive faithfulness down with a stronger mechanism than prompt
+  wording** — the inconclusive prompt-fix result (16 → 10/15) suggests
+  wording alone won't close it; e.g. require the answer to quote the
+  retrieved extract for each claim, or add a grounding check at the
+  runner layer. Establish per-axis noise bands with repeated runs before
+  crediting any fix.
 - **Validate the judges against human experts.** Right now their alignment
   with human judgment is assumed, not measured — every rubric was
   hand-authored with synthetic few-shot examples, not calibrated against
